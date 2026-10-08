@@ -256,3 +256,44 @@ class Setting(db.Model):
     value = db.Column(db.UnicodeText)
     type = db.Column(db.String(20), nullable=False, default='text')  # text|textarea|number|email|url
     description = db.Column(db.Unicode(255))
+
+
+class Reservation(TimestampMixin, db.Model):
+    """Đặt trước sách đang hết: xếp hàng chờ, khi có sách trả về hệ thống tự tạo phiếu chờ lấy cho người đầu hàng.
+    waiting (đang chờ) -> fulfilled (đã chuyển thành phiếu mượn) | cancelled (người dùng hủy)
+    """
+    __tablename__ = 'reservations'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    book_id = db.Column(db.Integer, db.ForeignKey('books.id', ondelete='CASCADE'), nullable=False, index=True)
+    status = db.Column(db.String(10), nullable=False, default='waiting', index=True)
+
+    user = db.relationship('User')
+    book = db.relationship('Book')
+
+    STATUS_LABELS = {'waiting': 'Đang chờ', 'fulfilled': 'Đã có sách', 'cancelled': 'Đã hủy'}
+
+
+class Notification(db.Model):
+    """Thông báo trong hệ thống gửi tới người dùng."""
+    __tablename__ = 'notifications'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    message = db.Column(db.Unicode(500), nullable=False)
+    link = db.Column(db.String(255))
+    # Khóa chống gửi trùng (vd. nhắc hạn trả của cùng một phiếu trong cùng một ngày)
+    dedup_key = db.Column(db.String(100), index=True)
+    is_read = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=now, index=True)
+
+
+class Favorite(db.Model):
+    """Tủ sách yêu thích của thành viên."""
+    __tablename__ = 'favorites'
+    __table_args__ = (UniqueConstraint('user_id', 'book_id', name='uq_favorite_user_book'),)
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    book_id = db.Column(db.Integer, db.ForeignKey('books.id', ondelete='CASCADE'), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=now)
+
+    book = db.relationship('Book')

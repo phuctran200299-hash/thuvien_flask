@@ -1,4 +1,4 @@
-"""Chức năng của thành viên: sách của tôi, đặt mượn, hủy, gia hạn, thông tin cá nhân."""
+"""Chức năng của thành viên: sách của tôi, đặt mượn, đặt trước, hủy, gia hạn, thông báo, thông tin cá nhân."""
 import re
 from datetime import timedelta
 
@@ -6,9 +6,10 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from ..extensions import db
-from ..models import AccessLog, Borrowing, User
-from ..services import (BusinessError, borrow_book, cancel_by_user, expire_pending_borrowings, get_setting,
-                        get_setting_int, renew_borrowing, unpaid_fine)
+from ..models import AccessLog, Borrowing, Favorite, Notification, Reservation, User
+from ..services import (BusinessError, borrow_book, cancel_by_user, cancel_reservation, expire_pending_borrowings,
+                        get_setting, get_setting_int, mark_notifications_read, queue_position, renew_borrowing,
+                        reserve_book, send_due_reminders, unpaid_fine)
 
 bp = Blueprint('user', __name__)
 
@@ -17,16 +18,21 @@ bp = Blueprint('user', __name__)
 @login_required
 def my_books():
     expire_pending_borrowings()
+    send_due_reminders(current_user.id)
     active = (Borrowing.query.filter(Borrowing.user_id == current_user.id, Borrowing.status.in_(('pending', 'borrowing')))
               .order_by(Borrowing.status.desc(), Borrowing.due_date).all())
     history = (Borrowing.query.filter(Borrowing.user_id == current_user.id, Borrowing.status.in_(('returned', 'cancelled')))
                .order_by(Borrowing.updated_at.desc()).limit(50).all())
     reading = (AccessLog.query.filter(AccessLog.user_id == current_user.id, AccessLog.action.in_(('read', 'download')))
                .order_by(AccessLog.created_at.desc()).limit(50).all())
+    reservations = (Reservation.query.filter_by(user_id=current_user.id, status='waiting')
+                    .order_by(Reservation.created_at).all())
+    favorites = (Favorite.query.filter_by(user_id=current_user.id).order_by(Favorite.created_at.desc()).all())
     hold_days = get_setting_int('pending_expire_days', 3)
     deadlines = {b.id: b.created_at.date() + timedelta(days=hold_days) for b in active if b.status == 'pending'}
     return render_template(
-        'user/my_books.html', active=active, history=history, reading=reading,
+        'user/my_books.html', active=active, history=history, reading=reading, favorites=favorites,
+        reservations=[(r, queue_position(r)) for r in reservations],
         debt=unpaid_fine(current_user.id), deadlines=deadlines, hold_days=hold_days,
         max_renewals=get_setting_int('max_renewals', 2), renew_days=get_setting_int('renew_days', 7),
         library={k: get_setting(k) for k in ('contact_address', 'opening_hours', 'contact_phone', 'contact_email')},
@@ -43,6 +49,51 @@ def borrow(book_id):
     except BusinessError as e:
         flash(str(e), 'error')
     return redirect(url_for('main.book_detail', book_id=book_id))
+
+
+@bp.route('/reserve/<int:book_id>', methods=['POST'])
+@login_required
+def reserve(book_id):
+    try:
+        position = reserve_book(current_user, book_id)
+        flash(f'Đã đăng ký chờ sách (vị trí thứ {position} trong hàng chờ). '
+              'Khi có sách, thư viện sẽ giữ sách và gửi thông báo cho bạn.', 'success')
+    except BusinessError as e:
+        flash(str(e), 'error')
+    return redirect(url_for('main.book_detail', book_id=book_id))
+
+
+@bp.route('/reservations/<int:reservation_id>/cancel', methods=['POST'])
+@login_required
+def cancel_reserve(reservation_id):
+    try:
+        cancel_reservation(current_user, reservation_id)
+        flash('Đã hủy đăng ký chờ sách', 'success')
+    except BusinessError as e:
+        flash(str(e), 'error')
+    return redirect(request.referrer or url_for('user.my_books'))
+
+
+@bp.route('/notifications')
+@login_required
+def notifications():
+    items = (Notification.query.filter_by(user_id=current_user.id)
+             .order_by(Notification.created_at.desc(), Notification.id.desc()).limit(100).all())
+    return render_template('user/notifications.html', items=items)
+
+
+@bp.route('/notifications/read', methods=['POST'])
+@login_required
+def notifications_read():
+    """Đánh dấu đã đọc: một thông báo (id) rồi mở liên kết của nó, hoặc tất cả."""
+    notification_id = request.form.get('id', type=int)
+    mark_notifications_read(current_user.id, notification_id)
+    if notification_id:
+        item = Notification.query.filter_by(id=notification_id, user_id=current_user.id).first()
+        # Liên kết do hệ thống tạo, chỉ là đường dẫn nội bộ
+        if item and item.link and item.link.startswith('/') and not item.link.startswith('//'):
+            return redirect(item.link)
+    return redirect(url_for('user.notifications'))
 
 
 @bp.route('/borrowing/<int:borrow_id>/cancel', methods=['POST'])

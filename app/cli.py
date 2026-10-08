@@ -3,6 +3,7 @@
     flask db upgrade      Tạo/cập nhật bảng theo migration (Flask-Migrate)
     flask seed            Nạp dữ liệu mẫu (tài khoản admin/password123)
     flask expire-pending  Hủy phiếu chờ lấy quá hạn (lên lịch chạy hằng ngày)
+    flask send-reminders  Gửi thông báo nhắc hạn trả sách (lên lịch chạy hằng ngày)
 """
 import sys
 from datetime import date, datetime, timedelta
@@ -13,9 +14,9 @@ from flask import current_app
 from sqlalchemy.engine import make_url
 
 from .extensions import db
-from .models import (AccessLog, Author, Book, Borrowing, BorrowRenewal, Category, DocumentFile, Publisher, Review,
-                     Setting, User)
-from .services import DEFAULT_SETTINGS, expire_pending_borrowings
+from .models import (AccessLog, Author, Book, Borrowing, BorrowRenewal, Category, DocumentFile, Favorite, Notification,
+                     Publisher, Reservation, Review, Setting, User)
+from .services import DEFAULT_SETTINGS, expire_pending_borrowings, send_due_reminders
 
 
 def register(app):
@@ -26,6 +27,7 @@ def register(app):
     app.cli.add_command(init_db)
     app.cli.add_command(seed)
     app.cli.add_command(expire_pending)
+    app.cli.add_command(send_reminders)
 
 
 @click.command('init-db')
@@ -53,6 +55,13 @@ def expire_pending():
     """Hủy các phiếu chờ lấy sách đã quá thời gian giữ sách."""
     count = expire_pending_borrowings()
     click.echo(f'[{datetime.now():%Y-%m-%d %H:%M}] Đã tự động hủy {count} phiếu chờ lấy quá hạn.')
+
+
+@click.command('send-reminders')
+def send_reminders():
+    """Gửi thông báo nhắc các phiếu sắp đến hạn hoặc đã quá hạn trả."""
+    count = send_due_reminders()
+    click.echo(f'[{datetime.now():%Y-%m-%d %H:%M}] Đã gửi {count} thông báo nhắc hạn trả.')
 
 
 # ================================================
@@ -89,7 +98,8 @@ def seed(force):
         click.echo('Đã có dữ liệu. Dùng --force để xóa và nạp lại.')
         return
     if force:
-        for model in (AccessLog, Review, BorrowRenewal, Borrowing, DocumentFile, Book, Author, Publisher, Category, User, Setting):
+        for model in (Notification, Favorite, Reservation, AccessLog, Review, BorrowRenewal, Borrowing, DocumentFile,
+                      Book, Author, Publisher, Category, User, Setting):
             db.session.query(model).delete()
         db.session.commit()
     seed_data()

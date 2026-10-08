@@ -1,0 +1,31 @@
+{% extends 'admin/base.html' %}
+{% from '_macros.html' import post_button %}
+{% block title %}Hàng chờ đặt trước{% endblock %}
+{% block content %}
+<p class="text-gray-600 mb-6">Thành viên đăng ký chờ khi sách đã hết. Khi có sách trả về (hoặc tăng số lượng), hệ thống tự tạo phiếu
+  chờ lấy cho người đứng đầu hàng chờ đủ điều kiện mượn và gửi thông báo.</p>
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-gray-50"><tr>
+      <th class="px-5 py-3 text-left font-semibold text-gray-600">Tài liệu</th><th class="px-5 py-3 text-left font-semibold text-gray-600">Thứ tự</th>
+      <th class="px-5 py-3 text-left font-semibold text-gray-600">Người chờ</th><th class="px-5 py-3 text-left font-semibold text-gray-600">Đăng ký lúc</th>
+      <th class="px-5 py-3 text-left font-semibold text-gray-600">Bản giấy</th><th class="px-5 py-3"></th></tr></thead>
+    <tbody class="divide-y divide-gray-100">
+      {% set ns = namespace(book=None, pos=0) %}
+      {% for r in items %}
+        {% if r.book_id != ns.book %}{% set ns.book = r.book_id %}{% set ns.pos = 0 %}{% endif %}
+        {% set ns.pos = ns.pos + 1 %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-5 py-3 font-medium text-gray-900"><a href="{{ url_for('admin.book_form', book_id=r.book_id) }}" class="hover:text-indigo-600">{{ r.book.title }}</a></td>
+          <td class="px-5 py-3"><span class="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-full text-xs font-semibold">#{{ ns.pos }}</span></td>
+          <td class="px-5 py-3"><a href="{{ url_for('admin.user_detail', user_id=r.user_id) }}" class="text-gray-900 hover:text-indigo-600">{{ r.user.full_name }}</a>
+            <span class="block text-xs text-gray-500">{{ r.user.email }}</span></td>
+          <td class="px-5 py-3 text-gray-600">{{ r.created_at|datetime }}</td>
+          <td class="px-5 py-3 text-gray-600">{{ r.book.available }} / {{ r.book.quantity }}</td>
+          <td class="px-5 py-3">{{ post_button(url_for('admin.reservation_cancel', reservation_id=r.id), 'Hủy', 'text-red-600 font-medium', 'Hủy đăng ký chờ này?') }}</td>
+        </tr>
+      {% else %}<tr><td colspan="6" class="px-5 py-12 text-center text-gray-400">Không có ai đang chờ</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

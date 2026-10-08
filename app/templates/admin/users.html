@@ -16,7 +16,10 @@
     </select>
     <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Lọc</button>
   </form>
-  <a href="{{ url_for('admin.export', kind='users') }}" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium">⬇ Xuất Excel</a>
+  <div class="flex gap-2">
+    <a href="{{ url_for('admin.user_new') }}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">+ Thêm người dùng</a>
+    <a href="{{ url_for('admin.export', kind='users') }}" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium">⬇ Xuất Excel</a>
+  </div>
 </div>
 
 <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">

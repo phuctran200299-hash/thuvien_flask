@@ -7,9 +7,10 @@ from flask_login import current_user, login_required
 from sqlalchemy import func, or_, select
 
 from ..extensions import db
-from ..models import AccessLog, Author, Book, Borrowing, Category, DocumentFile, Publisher, Review, User
-from ..services import (BusinessError, can_access_document, can_review, get_setting_int, log_access,
-                        save_review)
+from ..models import (AccessLog, Author, Book, Borrowing, Category, DocumentFile, Publisher, Reservation, Review,
+                      User)
+from ..services import (BusinessError, can_access_document, can_review, delete_review, get_setting_int,
+                        is_favorite, log_access, queue_position, save_review, toggle_favorite)
 from ..utils import get_page
 
 bp = Blueprint('main', __name__)
@@ -102,13 +103,16 @@ def book_detail(book_id):
     can_read, _ = can_access_document(book, 'read')
     can_download, _ = can_access_document(book, 'download')
 
-    active_borrow = my_review = None
-    reviewable = False
+    active_borrow = my_review = my_reservation = None
+    reviewable = favorite = False
     if current_user.is_authenticated:
         active_borrow = Borrowing.query.filter(Borrowing.user_id == current_user.id, Borrowing.book_id == book_id,
                                                Borrowing.status.in_(('pending', 'borrowing'))).first()
         reviewable = can_review(current_user, book_id)
         my_review = Review.query.filter_by(book_id=book_id, user_id=current_user.id).first()
+        my_reservation = Reservation.query.filter_by(book_id=book_id, user_id=current_user.id, status='waiting').first()
+        favorite = is_favorite(current_user.id, book_id)
+    queue_length = Reservation.query.filter_by(book_id=book_id, status='waiting').count()
 
     rating = db.session.execute(select(func.count(Review.id), func.avg(Review.rating * 1.0))
                                 .where(Review.book_id == book_id)).one()
@@ -119,7 +123,9 @@ def book_detail(book_id):
 
     return render_template(
         'main/book_detail.html', book=book, can_read=can_read, can_download=can_download,
-        active_borrow=active_borrow, reviewable=reviewable, my_review=my_review,
+        active_borrow=active_borrow, reviewable=reviewable, my_review=my_review, favorite=favorite,
+        my_reservation=my_reservation, queue_position=queue_position(my_reservation) if my_reservation else None,
+        queue_length=queue_length,
         rating_count=rating[0], rating_avg=round(rating[1], 1) if rating[1] else None, related=related,
         rules={k: get_setting_int(k, d) for k, d in (('max_borrow_days', 14), ('max_renewals', 2),
                                                       ('fine_per_day', 5000), ('max_books_per_user', 5))},
@@ -177,3 +183,25 @@ def review(book_id):
     except BusinessError as e:
         flash(str(e), 'error')
     return redirect(url_for('main.book_detail', book_id=book_id) + '#reviews')
+
+
+@bp.route('/reviews/<int:review_id>/delete', methods=['POST'])
+@login_required
+def review_delete(review_id):
+    try:
+        book_id = delete_review(current_user, review_id)
+        flash('Đã xóa đánh giá', 'success')
+    except BusinessError as e:
+        flash(str(e), 'error')
+        return redirect(request.referrer or url_for('main.index'))
+    # Quản trị viên xóa từ trang kiểm duyệt thì quay lại trang đó
+    return redirect(request.referrer or url_for('main.book_detail', book_id=book_id))
+
+
+@bp.route('/books/<int:book_id>/favorite', methods=['POST'])
+@login_required
+def favorite(book_id):
+    db.get_or_404(Book, book_id)
+    added = toggle_favorite(current_user, book_id)
+    flash('Đã thêm vào tủ sách yêu thích' if added else 'Đã bỏ khỏi tủ sách yêu thích', 'success')
+    return redirect(request.referrer or url_for('main.book_detail', book_id=book_id))

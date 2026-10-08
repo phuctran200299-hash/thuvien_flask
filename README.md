@@ -68,8 +68,8 @@ Mở http://localhost:8000. SQL Server chạy trong container ở cổng 1433 (`
 | Tác nhân | Chức năng |
 |---|---|
 | **Khách vãng lai** | Tra cứu tài liệu theo tên, tác giả, NXB, ISBN, từ khóa, mô tả; lọc theo danh mục, tác giả, NXB, khoảng năm xuất bản, còn bản giấy, có bản số; sắp xếp; xem chi tiết và đánh giá; **đọc tài liệu số công khai**; đăng ký |
-| **Thành viên** | Đăng nhập; quản lý thông tin cá nhân, đổi mật khẩu; **đọc trực tuyến và tải tài liệu số theo quyền**; đặt mượn sách giấy, tự hủy phiếu chờ, gia hạn; xem lịch sử mượn trả, tiền phạt, **lịch sử đọc/tải**; đánh giá tài liệu |
-| **Quản trị viên / cán bộ thư viện** | Dashboard; **quản lý tài liệu** (thêm/sửa/xóa, ảnh bìa, tải lên nhiều tệp số, đặt quyền đọc/tải); **quản lý danh mục, tác giả, nhà xuất bản**; **quản lý người dùng và phân quyền**; quản lý mượn trả (giao sách, nhận trả, tự tính phạt, hủy phiếu, thu phạt); **theo dõi lịch sử truy cập tài liệu**; **thống kê** (biểu đồ, top tài liệu) và **xuất Excel**, in PDF; cài đặt hệ thống |
+| **Thành viên** | Đăng nhập; quản lý thông tin cá nhân, đổi mật khẩu; **đọc trực tuyến và tải tài liệu số theo quyền**; đặt mượn sách giấy, tự hủy phiếu chờ, gia hạn; **đăng ký chờ (đặt trước) khi sách hết**; **nhận thông báo** (nhắc hạn trả, sách đặt trước đã có, tiền phạt); **tủ sách yêu thích**; xóa đánh giá của mình; xem lịch sử mượn trả, tiền phạt, **lịch sử đọc/tải**; đánh giá tài liệu |
+| **Quản trị viên / cán bộ thư viện** | Dashboard; **quản lý tài liệu** (thêm/sửa/xóa, ảnh bìa, tải lên nhiều tệp số, đặt quyền đọc/tải); **quản lý danh mục, tác giả, nhà xuất bản**; **quản lý người dùng và phân quyền** (thêm, sửa, đặt lại mật khẩu, khóa, xóa tài khoản); quản lý mượn trả (**lập phiếu tại quầy**, giao sách, nhận trả, tự tính phạt, hủy phiếu, thu phạt); **quản lý hàng chờ đặt trước**; **kiểm duyệt đánh giá**; **theo dõi lịch sử truy cập tài liệu**; **thống kê** (biểu đồ, top tài liệu) và **xuất Excel**, in PDF; cài đặt hệ thống |
 
 ### Đối chiếu với đề cương
 
@@ -78,7 +78,7 @@ Mở http://localhost:8000. SQL Server chạy trong container ở cổng 1433 (`
 | Python, Flask | `app/` - Flask 3, chia module bằng Blueprint |
 | SQL Server, SQLAlchemy, Flask-Migrate | `app/models.py`, thư mục `migrations/` |
 | HTML, CSS, JS, Jinja2 | `app/templates/` (giao diện dùng Tailwind CSS) |
-| pytest, Playwright | `tests/` (47 test nghiệp vụ), `tests/e2e/` (5 test giao diện) |
+| pytest, Playwright | `tests/` (68 test nghiệp vụ), `tests/e2e/` (5 test giao diện) |
 | Đăng ký/đăng nhập, quản lý tài khoản | `app/blueprints/auth.py`, `user.py` |
 | Tìm kiếm, lọc theo tên, tác giả, danh mục, năm XB, từ khóa | `main.books` |
 | Đọc trực tuyến, tải tài liệu, kiểm soát quyền đọc/tải | `main.read`, `main.document`, `services.can_access_document` |
@@ -115,10 +115,11 @@ flowchart TB
 app/
 ├── __init__.py        create_app: khởi tạo Flask, extension, blueprint, bộ lọc template
 ├── config.py          cấu hình (đọc từ .env)
-├── models.py          11 bảng CSDL
-├── services.py        nghiệp vụ: cài đặt, mượn - trả, tiền phạt, quyền tài liệu, lịch sử truy cập, đánh giá
+├── models.py          14 bảng CSDL
+├── services.py        nghiệp vụ: cài đặt, thông báo, mượn - trả, đặt trước, tiền phạt, quyền tài liệu,
+│                      lịch sử truy cập, đánh giá, yêu thích
 ├── utils.py           lưu file upload (kiểm tra chữ ký file), phân trang, định dạng hiển thị
-├── cli.py             lệnh flask init-db / seed / expire-pending
+├── cli.py             lệnh flask init-db / seed / expire-pending / send-reminders
 ├── blueprints/        auth.py · main.py · user.py · admin.py
 ├── templates/         giao diện Jinja2
 └── static/            toast.js, ảnh bìa upload
@@ -139,6 +140,11 @@ erDiagram
     books ||--o{ document_files : "có tệp số"
     books ||--o{ borrowing : "được mượn"
     users ||--o{ borrowing : "mượn"
+    users ||--o{ reservations : "đặt trước"
+    books ||--o{ reservations : "được chờ"
+    users ||--o{ notifications : "nhận"
+    users ||--o{ favorites : "yêu thích"
+    books ||--o{ favorites : "được yêu thích"
     borrowing ||--o{ borrow_renewals : "gia hạn"
     books ||--o{ book_reviews : "được đánh giá"
     users ||--o{ book_reviews : "viết"
@@ -225,8 +231,12 @@ erDiagram
     }
 ```
 
+Bảng `reservations` (hàng chờ đặt trước: `waiting | fulfilled | cancelled`), `notifications` (thông báo, có
+`dedup_key` để không nhắc trùng trong ngày) và `favorites` (tủ sách yêu thích, UNIQUE theo người dùng + tài liệu)
+được thêm ở migration `b7d2e4a91c05`.
+
 Bảng `settings` lưu cấu hình dạng key - value: số ngày mượn, số sách tối đa, số lần và số ngày gia hạn,
-số ngày giữ sách, tiền phạt mỗi ngày, thông tin liên hệ.
+số ngày giữ sách, tiền phạt mỗi ngày, số ngày nhắc trước hạn trả, thông tin liên hệ.
 
 **Lưu ý thiết kế cho SQL Server**
 - Cột chữ dùng `NVARCHAR` (`db.Unicode`) để lưu tiếng Việt; database dùng collation `Vietnamese_CI_AS`.
@@ -242,6 +252,8 @@ stateDiagram-v2
     [*] --> pending: Thành viên đặt mượn
     pending --> borrowing: Thủ thư xác nhận giao sách (tính hạn trả từ ngày nhận)
     pending --> cancelled: Hủy hoặc quá số ngày giữ sách
+    [*] --> waiting: Sách hết, thành viên đăng ký chờ
+    waiting --> pending: Có sách trả về, tự giữ cho người đầu hàng chờ
     borrowing --> borrowing: Gia hạn (tối đa N lần, chưa quá hạn)
     borrowing --> returned: Thủ thư nhận trả (tự tính tiền phạt nếu trễ)
     returned --> [*]
@@ -274,7 +286,7 @@ stateDiagram-v2
 pip install -r requirements-dev.txt
 python -m playwright install chromium
 
-pytest              :: 47 test nghiệp vụ (SQLite trong bộ nhớ, ~2 phút)
+pytest              :: 68 test nghiệp vụ (SQLite trong bộ nhớ, ~2 phút)
 pytest -m e2e       :: 5 test giao diện bằng trình duyệt Chromium
 pytest -m e2e --headed   :: xem trình duyệt tự thao tác
 ```
@@ -292,23 +304,31 @@ pytest
 | `test_borrowing.py` | Đặt mượn, trùng phiếu, hết sách, giới hạn số sách, nợ phạt, hủy, giao sách, gia hạn, trả trễ tính phạt, tự hủy phiếu quá hạn |
 | `test_documents.py` | Quyền đọc/tải, lịch sử truy cập, lượt xem, tìm kiếm, upload và chặn file giả mạo, đánh giá, XSS |
 | `test_admin.py` | Quản lý người dùng, danh mục, cài đặt, xuất CSV, CSRF, thống kê |
+| `test_features.py` | Đặt trước và tự giữ sách cho hàng chờ, nhắc hạn trả, thông báo, yêu thích, thêm/sửa/xóa người dùng, đặt lại mật khẩu, lập phiếu tại quầy, kiểm duyệt đánh giá |
 | `e2e/test_ui.py` | Tra cứu và đọc tài liệu, đặt mượn và thủ thư xác nhận, chống XSS trên giao diện, biểu đồ thống kê |
 
 ---
 
 ## 7. Tác vụ định kỳ
 
-`flask expire-pending` hủy các phiếu chờ lấy sách quá số ngày giữ. Hệ thống cũng tự chạy việc này khi có người
-mở trang mượn trả; lên lịch bằng Windows Task Scheduler nếu muốn chạy hằng ngày:
+| Lệnh | Việc làm |
+|---|---|
+| `flask expire-pending` | Hủy các phiếu chờ lấy sách quá số ngày giữ, trả sách cho người tiếp theo trong hàng chờ đặt trước |
+| `flask send-reminders` | Gửi thông báo nhắc phiếu sắp đến hạn và đã quá hạn (mỗi phiếu tối đa 1 lần/ngày) |
+
+Hệ thống cũng tự chạy hai việc này khi có người mở trang mượn trả hoặc trang *Sách của tôi*. Muốn chạy hằng ngày
+thì lên lịch bằng Windows Task Scheduler (tạo 2 tác vụ, mỗi tác vụ một lệnh):
 
 ```
 Chương trình:  C:\duong-dan\thuvien_flask\.venv\Scripts\flask.exe
-Tham số:       expire-pending
+Tham số:       expire-pending      (tác vụ thứ hai: send-reminders)
 Thư mục:       C:\duong-dan\thuvien_flask
 ```
 
+> Nâng cấp CSDL đang chạy lên phiên bản có đặt trước/thông báo/yêu thích: `flask db upgrade`.
+
 ## 8. Hạn chế và hướng phát triển
-- Chưa gửi email nhắc hạn trả (cần cấu hình SMTP)
-- Chưa có hàng chờ đặt trước khi sách hết
+- Thông báo mới hiển thị trong hệ thống, chưa gửi qua email (cần cấu hình SMTP)
+- Chưa có chức năng quên mật khẩu tự phục vụ (cần email); hiện quản trị viên đặt lại mật khẩu cho người dùng
 - Chưa tìm kiếm toàn văn trong nội dung tệp và chưa có gợi ý tài liệu thông minh
 - Xem trực tiếp mới hỗ trợ PDF và TXT; EPUB/DOC/DOCX cần tải về

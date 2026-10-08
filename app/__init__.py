@@ -41,8 +41,14 @@ def create_app(config_class=Config):
 
     @app.context_processor
     def inject_globals():
-        from .services import get_setting
-        return {'get_setting': get_setting, 'page_url': utils.page_url}
+        from flask_login import current_user
+
+        from .services import get_setting, unread_notifications
+
+        def unread_count():
+            return unread_notifications(current_user.id) if current_user.is_authenticated else 0
+
+        return {'get_setting': get_setting, 'page_url': utils.page_url, 'unread_count': unread_count}
 
     @app.errorhandler(CSRFError)
     def csrf_error(e):

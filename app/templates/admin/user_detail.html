@@ -1,5 +1,5 @@
 {% extends 'admin/base.html' %}
-{% from '_macros.html' import status_badge %}
+{% from '_macros.html' import post_button, status_badge %}
 {% block title %}Chi tiết người dùng{% endblock %}
 {% block content %}
 <a href="{{ url_for('admin.users') }}" class="text-sm text-gray-600 hover:text-indigo-600">← Danh sách người dùng</a>
@@ -14,9 +14,34 @@
       <div class="flex justify-between"><dt class="text-gray-500">Vai trò</dt><dd class="text-gray-900">{{ 'Quản trị' if user.is_admin else 'Thành viên' }}</dd></div>
       <div class="flex justify-between"><dt class="text-gray-500">Trạng thái</dt><dd class="text-gray-900">{{ user.status }}</dd></div>
       <div class="flex justify-between"><dt class="text-gray-500">Tham gia</dt><dd class="text-gray-900">{{ user.created_at|date }}</dd></div>
+      <div class="flex justify-between"><dt class="text-gray-500">Nợ phạt</dt><dd class="{{ 'text-red-600 font-semibold' if debt else 'text-gray-900' }}">{{ debt|money }}</dd></div>
     </dl>
+    <div class="mt-6 space-y-3 text-left">
+      <a href="{{ url_for('admin.user_detail', user_id=user.id, edit=1) }}" class="block w-full py-2 bg-indigo-600 text-white text-center text-sm font-semibold rounded-lg hover:bg-indigo-700">Sửa thông tin</a>
+      <form method="post" action="{{ url_for('admin.user_reset_password', user_id=user.id) }}" class="flex gap-2"
+            onsubmit="return confirm('Đặt lại mật khẩu cho tài khoản này?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label for="new-password" class="sr-only">Mật khẩu mới</label>
+        <input id="new-password" name="password" type="text" required minlength="6" placeholder="Mật khẩu mới" autocomplete="off"
+               class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm">
+        <button class="px-3 py-2 bg-amber-500 text-white text-sm font-semibold rounded-lg hover:bg-amber-600 whitespace-nowrap">Đặt lại</button>
+      </form>
+      {% if user.id != current_user.id %}
+        {{ post_button(url_for('admin.user_delete', user_id=user.id), 'Xóa tài khoản',
+                       'w-full py-2 border border-red-200 text-red-600 text-sm font-semibold rounded-lg hover:bg-red-50',
+                       'Xóa vĩnh viễn tài khoản này? Lịch sử mượn trả và đánh giá của người dùng sẽ bị xóa.') }}
+      {% endif %}
+    </div>
   </div>
   <div class="lg:col-span-2 space-y-6">
+    {% if reservations %}
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <h3 class="font-bold text-gray-900 mb-3">Đang chờ đặt trước ({{ reservations|length }})</h3>
+        <ul class="text-sm space-y-1">
+          {% for r in reservations %}<li>{{ r.book.title }} <span class="text-gray-500">· từ {{ r.created_at|date }}</span></li>{% endfor %}
+        </ul>
+      </div>
+    {% endif %}
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
       <h3 class="p-5 border-b border-gray-100 font-bold text-gray-900">Lịch sử mượn ({{ borrowings|length }})</h3>
       <table class="w-full text-sm"><tbody class="divide-y divide-gray-100">

@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Thông báo{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900 mb-1">Thông báo</h1>
+      <p class="text-gray-600">Nhắc hạn trả, sách đặt trước đã có, tiền phạt và các thay đổi phiếu mượn</p>
+    </div>
+    {% if items|selectattr('is_read', 'equalto', false)|list %}
+      <form method="post" action="{{ url_for('user.notifications_read') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50">Đánh dấu tất cả đã đọc</button>
+      </form>
+    {% endif %}
+  </div>
+
+  <div class="bg-white rounded-xl smooth-shadow divide-y divide-gray-100">
+    {% for n in items %}
+      <form method="post" action="{{ url_for('user.notifications_read') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="id" value="{{ n.id }}">
+        <button class="w-full text-left flex items-start gap-3 p-4 hover:bg-gray-50 {{ 'bg-indigo-50/60' if not n.is_read }}">
+          <span class="mt-1.5 w-2.5 h-2.5 rounded-full flex-shrink-0 {{ 'bg-indigo-600' if not n.is_read else 'bg-transparent' }}" aria-hidden="true"></span>
+          <span class="flex-1 min-w-0">
+            <span class="block text-sm {{ 'font-semibold text-gray-900' if not n.is_read else 'text-gray-700' }}">{{ n.message }}</span>
+            <span class="block text-xs text-gray-500 mt-1">{{ n.created_at|datetime }}{{ ' · Chưa đọc' if not n.is_read }}</span>
+          </span>
+        </button>
+      </form>
+    {% else %}
+      <div class="p-12 text-center">
+        <p class="text-5xl mb-3">🔔</p><p class="text-gray-500">Bạn chưa có thông báo nào</p>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

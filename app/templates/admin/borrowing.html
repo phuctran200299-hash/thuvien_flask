@@ -2,6 +2,18 @@
 {% from '_macros.html' import pagination as paginate, post_button, status_badge %}
 {% block title %}Quản lý mượn / trả{% endblock %}
 {% block content %}
+<details class="mb-6 bg-white rounded-xl shadow-sm border border-gray-100" {{ 'open' if not pagination.total }}>
+  <summary class="px-5 py-4 cursor-pointer font-semibold text-gray-900">➕ Lập phiếu mượn tại quầy</summary>
+  <form method="post" action="{{ url_for('admin.borrowing_new') }}" class="px-5 pb-5 grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div><label for="reader" class="block text-sm font-semibold text-gray-700 mb-1">Người đọc (tên đăng nhập hoặc email)</label>
+      <input id="reader" name="reader" required class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm"></div>
+    <div><label for="book" class="block text-sm font-semibold text-gray-700 mb-1">Tài liệu (ISBN hoặc mã tài liệu)</label>
+      <input id="book" name="book" required placeholder="vd. 978-1234567890 hoặc 12" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm"></div>
+    <button class="px-5 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700">Giao sách ngay</button>
+    <p class="md:col-span-3 text-xs text-gray-500">Người đọc nhận sách ngay tại quầy, hạn trả tính từ hôm nay. Vẫn áp dụng giới hạn số sách và chặn khi còn nợ phạt.</p>
+  </form>
+</details>
 <div class="flex flex-wrap gap-2 mb-4">
   {% for key, label in filters.items() %}
     <a href="{{ url_for('admin.borrowing', status=key, search=search or None) }}"

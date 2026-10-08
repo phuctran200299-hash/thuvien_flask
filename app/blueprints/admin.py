@@ -9,9 +9,12 @@ from flask_login import current_user
 from sqlalchemy import func, or_, select
 
 from ..extensions import db
-from ..models import (AccessLog, Author, Book, Borrowing, Category, DocumentFile, Publisher, User)
-from ..services import (BusinessError, admin_update_borrowing, all_settings, calculate_fine,
-                        expire_pending_borrowings, update_settings)
+from ..models import (AccessLog, Author, Book, Borrowing, Category, DocumentFile, Favorite, Notification, Publisher,
+                      Reservation, Review, User)
+from ..services import (BusinessError, admin_create_borrowing, admin_update_borrowing, all_settings, calculate_fine,
+                        expire_pending_borrowings, notify, send_due_reminders, serve_queue, unpaid_fine,
+                        update_settings)
+from .auth import EMAIL_RE, PHONE_RE, USERNAME_RE
 from ..utils import UploadError, delete_upload, get_page, save_upload
 
 bp = Blueprint('admin', __name__)
@@ -133,6 +136,8 @@ def book_form(book_id=None):
         book.allow_download = bool(form.get('allow_download'))
         if image:
             book.image = image
+        if not is_new:
+            serve_queue(book)  # tăng số lượng thì giữ sách cho người đang chờ đặt trước
         db.session.commit()
         if image and old_image:
             delete_upload(old_image, 'image')
@@ -178,6 +183,8 @@ def book_delete(book_id):
     # access_logs.file_id không cascade trên SQL Server nên xóa log trước
     AccessLog.query.filter_by(book_id=book_id).delete()
     Borrowing.query.filter_by(book_id=book_id).delete()
+    Reservation.query.filter_by(book_id=book_id).delete()
+    Favorite.query.filter_by(book_id=book_id).delete()
     db.session.delete(book)
     db.session.commit()
     for name in stored:
@@ -289,12 +296,121 @@ def users():
     return render_template('admin/users.html', pagination=pagination, search=search, role=role, status=status)
 
 
-@bp.route('/users/<int:user_id>')
+def _validate_user_form(form, user=None):
+    """Kiểm tra form thêm/sửa người dùng. Trả về danh sách lỗi."""
+    errors = []
+    user_id = user.id if user else 0
+    if user is None:
+        username = form.get('username', '').strip()
+        if not USERNAME_RE.match(username):
+            errors.append('Tên đăng nhập 3-50 ký tự, chỉ gồm chữ, số, dấu _ và .')
+        elif User.query.filter_by(username=username).first():
+            errors.append('Tên đăng nhập đã tồn tại')
+        if len(form.get('password', '')) < 6:
+            errors.append('Mật khẩu phải có ít nhất 6 ký tự')
+    full_name = form.get('full_name', '').strip()
+    email = form.get('email', '').strip()
+    phone = form.get('phone', '').strip()
+    if not full_name or len(full_name) > 100:
+        errors.append('Họ tên không được để trống (tối đa 100 ký tự)')
+    if not EMAIL_RE.match(email):
+        errors.append('Email không hợp lệ')
+    elif User.query.filter(User.email == email, User.id != user_id).first():
+        errors.append('Email đã được sử dụng')
+    if phone and not PHONE_RE.match(phone):
+        errors.append('Số điện thoại không hợp lệ')
+    if form.get('role') not in User.ROLES or form.get('status') not in User.STATUSES:
+        errors.append('Vai trò hoặc trạng thái không hợp lệ')
+    elif user and user.id == current_user.id and (form.get('role') != 'admin' or form.get('status') != 'active'):
+        errors.append('Bạn không thể tự hạ quyền hoặc khóa tài khoản của chính mình')
+    return errors
+
+
+def _apply_user_form(user, form):
+    user.full_name = form.get('full_name', '').strip()
+    user.email = form.get('email', '').strip()
+    user.phone = form.get('phone', '').strip() or None
+    user.address = form.get('address', '').strip()
+    user.role, user.status = form.get('role'), form.get('status')
+
+
+@bp.route('/users/new', methods=['GET', 'POST'])
+def user_new():
+    form = request.form
+    if request.method == 'POST':
+        errors = _validate_user_form(form)
+        if errors:
+            flash('\n'.join(errors), 'error')
+        else:
+            user = User(username=form.get('username', '').strip())
+            _apply_user_form(user, form)
+            user.set_password(form.get('password', ''))
+            db.session.add(user)
+            db.session.commit()
+            flash(f'Đã tạo tài khoản {user.username}', 'success')
+            return redirect(url_for('admin.user_detail', user_id=user.id))
+    return render_template('admin/user_form.html', user=None, form=form)
+
+
+@bp.route('/users/<int:user_id>', methods=['GET', 'POST'])
 def user_detail(user_id):
     user = db.get_or_404(User, user_id)
+    form = request.form
+    if request.method == 'POST':
+        errors = _validate_user_form(form, user)
+        if errors:
+            flash('\n'.join(errors), 'error')
+            return render_template('admin/user_form.html', user=user, form=form)
+        _apply_user_form(user, form)
+        db.session.commit()
+        flash('Cập nhật thông tin người dùng thành công', 'success')
+        return redirect(url_for('admin.user_detail', user_id=user_id))
+    if request.args.get('edit'):
+        return render_template('admin/user_form.html', user=user, form={})
     borrowings = Borrowing.query.filter_by(user_id=user_id).order_by(Borrowing.created_at.desc()).limit(50).all()
     logs = AccessLog.query.filter_by(user_id=user_id).order_by(AccessLog.created_at.desc()).limit(30).all()
-    return render_template('admin/user_detail.html', user=user, borrowings=borrowings, logs=logs)
+    reservations = Reservation.query.filter_by(user_id=user_id, status='waiting').order_by(Reservation.created_at).all()
+    return render_template('admin/user_detail.html', user=user, borrowings=borrowings, logs=logs,
+                           reservations=reservations, debt=unpaid_fine(user_id))
+
+
+@bp.route('/users/<int:user_id>/reset-password', methods=['POST'])
+def user_reset_password(user_id):
+    user = db.get_or_404(User, user_id)
+    password = request.form.get('password', '')
+    if len(password) < 6:
+        flash('Mật khẩu mới phải có ít nhất 6 ký tự', 'error')
+    else:
+        user.set_password(password)
+        notify(user.id, 'Mật khẩu của bạn vừa được quản trị viên đặt lại. Hãy đổi mật khẩu mới sau khi đăng nhập.',
+               '/profile')
+        db.session.commit()
+        flash(f'Đã đặt lại mật khẩu cho {user.username}', 'success')
+    return redirect(url_for('admin.user_detail', user_id=user_id))
+
+
+@bp.route('/users/<int:user_id>/delete', methods=['POST'])
+def user_delete(user_id):
+    user = db.get_or_404(User, user_id)
+    if user.id == current_user.id:
+        flash('Bạn không thể xóa tài khoản của chính mình', 'error')
+        return redirect(url_for('admin.user_detail', user_id=user_id))
+    active = Borrowing.query.filter(Borrowing.user_id == user_id, Borrowing.status.in_(('pending', 'borrowing'))).count()
+    if active or unpaid_fine(user_id):
+        flash('Không thể xóa: người dùng còn sách đang mượn/chờ lấy hoặc còn nợ tiền phạt. '
+              'Có thể chuyển trạng thái sang "Bị khóa".', 'error')
+        return redirect(url_for('admin.user_detail', user_id=user_id))
+    # Giữ lại lịch sử truy cập (ẩn danh) để thống kê; xóa dữ liệu cá nhân còn lại
+    AccessLog.query.filter_by(user_id=user_id).update({'user_id': None})
+    for model in (Notification, Favorite, Reservation, Review):
+        model.query.filter_by(user_id=user_id).delete()
+    for borrowing in Borrowing.query.filter_by(user_id=user_id).all():
+        db.session.delete(borrowing)  # xóa kèm lịch sử gia hạn
+    DocumentFile.query.filter_by(uploaded_by=user_id).update({'uploaded_by': None})
+    db.session.delete(user)
+    db.session.commit()
+    flash(f'Đã xóa tài khoản {user.username}', 'success')
+    return redirect(url_for('admin.users'))
 
 
 # ================================================
@@ -319,6 +435,7 @@ def _borrow_filter(stmt, status):
 @bp.route('/borrowing')
 def borrowing():
     expire_pending_borrowings()
+    send_due_reminders()
     status = request.args.get('status') if request.args.get('status') in BORROW_FILTERS else 'all'
     search = request.args.get('search', '').strip()
     stmt = select(Borrowing).join(User, Borrowing.user_id == User.id).join(Book, Borrowing.book_id == Book.id)
@@ -331,6 +448,66 @@ def borrowing():
     counts = {key: db.session.scalar(_borrow_filter(select(func.count(Borrowing.id)), key)) for key in BORROW_FILTERS}
     return render_template('admin/borrowing.html', pagination=pagination, status=status, search=search,
                            filters=BORROW_FILTERS, counts=counts, calculate_fine=calculate_fine)
+
+
+@bp.route('/borrowing/new', methods=['POST'])
+def borrowing_new():
+    """Lập phiếu mượn tại quầy: nhập tên đăng nhập/email người đọc và mã tài liệu/ISBN."""
+    reader = request.form.get('reader', '').strip()
+    book_code = request.form.get('book', '').strip().lstrip('#')
+    user = User.query.filter((User.username == reader) | (User.email == reader)).first() if reader else None
+    book = None
+    if book_code:
+        book = Book.query.filter_by(isbn=book_code).first()
+        if book is None and book_code.isdigit():
+            book = db.session.get(Book, int(book_code))
+    if not user:
+        flash('Không tìm thấy người đọc với tên đăng nhập/email đã nhập', 'error')
+    elif not book:
+        flash('Không tìm thấy tài liệu với mã/ISBN đã nhập', 'error')
+    else:
+        try:
+            borrowing = admin_create_borrowing(user.id, book.id)
+            flash(f'Đã lập phiếu #{borrowing.id}: {user.full_name} mượn "{book.title}", '
+                  f'hạn trả {borrowing.due_date:%d/%m/%Y}', 'success')
+        except BusinessError as e:
+            flash(str(e), 'error')
+    return redirect(url_for('admin.borrowing'))
+
+
+@bp.route('/reservations')
+def reservations():
+    items = (Reservation.query.filter_by(status='waiting')
+             .order_by(Reservation.book_id, Reservation.created_at, Reservation.id).all())
+    return render_template('admin/reservations.html', items=items)
+
+
+@bp.route('/reservations/<int:reservation_id>/cancel', methods=['POST'])
+def reservation_cancel(reservation_id):
+    reservation = Reservation.query.filter_by(id=reservation_id, status='waiting').first_or_404()
+    reservation.status = 'cancelled'
+    notify(reservation.user_id, f'Đăng ký chờ sách "{reservation.book.title}" đã bị thư viện hủy.', '/my-books')
+    db.session.commit()
+    flash('Đã hủy đăng ký chờ', 'success')
+    return redirect(url_for('admin.reservations'))
+
+
+# ================================================
+# KIỂM DUYỆT ĐÁNH GIÁ
+# ================================================
+@bp.route('/reviews')
+def reviews():
+    search = request.args.get('search', '').strip()
+    rating = request.args.get('rating', type=int) or 0
+    stmt = select(Review).join(Book, Review.book_id == Book.id).join(User, Review.user_id == User.id)
+    if search:
+        like = f'%{search}%'
+        stmt = stmt.where(or_(Book.title.ilike(like), User.full_name.ilike(like), Review.comment.ilike(like)))
+    if 1 <= rating <= 5:
+        stmt = stmt.where(Review.rating == rating)
+    pagination = db.paginate(stmt.order_by(Review.created_at.desc(), Review.id.desc()),
+                             page=get_page(), per_page=20, error_out=False)
+    return render_template('admin/reviews.html', pagination=pagination, search=search, rating=rating)
 
 
 @bp.route('/borrowing/<int:borrow_id>/<any(confirm_pickup, confirm_return, cancel, mark_paid):action>', methods=['POST'])
