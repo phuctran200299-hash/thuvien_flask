@@ -1,0 +1,54 @@
+{% extends 'admin/base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+{% set input = 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent' %}
+<p class="text-gray-600 mb-6">Thêm, sửa, xóa {{ label }}. Chỉ xóa được khi không còn tài liệu nào thuộc {{ label }} đó.</p>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <form method="post" action="{{ url_for('admin.taxonomy', kind=kind) }}" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4 h-fit">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="id" value="{{ editing.id if editing else 0 }}">
+    <h2 class="text-lg font-bold text-gray-900">{{ ('Sửa ' if editing else 'Thêm ') ~ label }}</h2>
+    <div><label for="name" class="block text-sm font-semibold text-gray-700 mb-2">Tên *</label>
+      <input id="name" name="name" required maxlength="150" value="{{ editing.name if editing }}" class="{{ input }}"></div>
+    <div><label for="description" class="block text-sm font-semibold text-gray-700 mb-2">Mô tả</label>
+      <textarea id="description" name="description" rows="4" class="{{ input }}">{{ editing.description if editing and editing.description }}</textarea></div>
+    <div class="flex gap-2">
+      <button class="px-5 py-2.5 bg-indigo-600 text-white rounded-lg font-medium">{{ 'Cập nhật' if editing else 'Thêm mới' }}</button>
+      {% if editing %}<a href="{{ url_for('admin.taxonomy', kind=kind) }}" class="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium">Hủy</a>{% endif %}
+    </div>
+  </form>
+
+  <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100">
+    <form method="get" class="p-5 border-b border-gray-100 flex gap-2">
+      <label for="search" class="sr-only">Tìm theo tên</label>
+      <input id="search" name="search" value="{{ search }}" placeholder="Tìm theo tên..." class="{{ input }}">
+      <button class="px-5 py-2 bg-indigo-600 text-white rounded-lg font-medium">Tìm</button>
+    </form>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50"><tr>
+          <th class="px-5 py-3 text-left font-semibold text-gray-600">Tên</th><th class="px-5 py-3 text-left font-semibold text-gray-600">Mô tả</th>
+          <th class="px-5 py-3 text-left font-semibold text-gray-600">Số tài liệu</th><th class="px-5 py-3 text-left font-semibold text-gray-600">Thao tác</th></tr></thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for item, count in items %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-5 py-3 font-medium text-gray-900">{{ item.name }}</td>
+              <td class="px-5 py-3 text-gray-600 max-w-xs truncate">{{ item.description or '' }}</td>
+              <td class="px-5 py-3"><span class="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-semibold">{{ count }}</span></td>
+              <td class="px-5 py-3 whitespace-nowrap">
+                <a href="{{ url_for('admin.taxonomy', kind=kind, edit=item.id) }}" class="text-indigo-600 font-medium">Sửa</a>
+                <span class="text-gray-300">|</span>
+                <form method="post" action="{{ url_for('admin.taxonomy', kind=kind) }}" class="inline" onsubmit="return confirm('Xóa mục này?')">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{ item.id }}">
+                  <button class="text-red-600 font-medium">Xóa</button>
+                </form>
+              </td>
+            </tr>
+          {% else %}<tr><td colspan="4" class="px-5 py-12 text-center text-gray-400">Chưa có dữ liệu</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

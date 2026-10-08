@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import cover, post_button, status_badge %}
+{% block title %}Sách của tôi{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <h1 class="text-3xl font-bold text-gray-900 mb-1">Sách của tôi</h1>
+  <p class="text-gray-600 mb-6">Sách đang mượn, lịch sử mượn trả và tài liệu số đã đọc</p>
+
+  {% if debt %}
+    <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700" role="alert">
+      Bạn còn khoản phạt trả trễ chưa thanh toán: <b>{{ debt|money }}</b>. Vui lòng thanh toán tại quầy thư viện; bạn chưa thể đặt mượn thêm cho đến khi thanh toán.
+    </div>
+  {% endif %}
+
+  {% if request.args.get('new') %}
+    <div class="mb-6 p-5 bg-emerald-50 border border-emerald-200 rounded-xl text-sm text-emerald-800">
+      <p class="font-semibold mb-2">Đặt mượn thành công! Vui lòng đến thư viện nhận sách trong {{ hold_days }} ngày.</p>
+      <p>📍 {{ library.contact_address }} · 🕒 {{ library.opening_hours }} · ☎ {{ library.contact_phone }}</p>
+      <p class="mt-1">Mang theo thẻ sinh viên hoặc CCCD khi đến nhận sách.</p>
+    </div>
+  {% endif %}
+
+  <div class="border-b border-gray-200 mb-6" role="tablist">
+    <nav class="flex gap-8">
+      {% for key, label, n in [('active', 'Đang mượn', active|length), ('history', 'Lịch sử mượn', history|length), ('reading', 'Đã đọc / tải', reading|length)] %}
+        <button type="button" role="tab" data-tab="{{ key }}" class="tab-btn pb-4 px-1 border-b-2 font-medium text-sm {{ 'border-indigo-600 text-indigo-600' if loop.first else 'border-transparent text-gray-600' }}">{{ label }} ({{ n }})</button>
+      {% endfor %}
+    </nav>
+  </div>
+
+  <section data-panel="active" class="space-y-4">
+    {% for b in active %}
+      <div class="bg-white rounded-xl smooth-shadow p-6 border border-gray-100 flex flex-col md:flex-row gap-6">
+        <div class="w-28 h-40 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 mx-auto md:mx-0">{{ cover(b.book) }}</div>
+        <div class="flex-1 space-y-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class="text-xl font-bold text-gray-900">{{ b.book.title }}</h2>{{ status_badge(b) }}
+          </div>
+          <p class="text-sm text-gray-600">Tác giả: {{ b.book.author_name or 'Không rõ' }}</p>
+          {% if b.status == 'pending' %}
+            <p class="text-sm bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-800">
+              Vui lòng đến thư viện nhận sách trước ngày <b>{{ deadlines[b.id]|date }}</b>; quá hạn phiếu sẽ tự động bị hủy.
+            </p>
+            {{ post_button(url_for('user.cancel', borrow_id=b.id), 'Hủy đặt mượn', 'px-4 py-2 bg-gray-500 text-white text-sm font-semibold rounded-lg hover:bg-gray-600', 'Hủy phiếu đặt mượn này?') }}
+          {% else %}
+            <p class="text-sm">Ngày mượn: <b>{{ b.borrow_date|date }}</b> · Hạn trả: <b class="{{ 'text-red-600' if b.is_overdue else '' }}">{{ b.due_date|date }}</b>
+              {% if b.is_overdue %}(quá hạn {{ b.overdue_days }} ngày){% else %}(còn {{ b.days_remaining }} ngày){% endif %}</p>
+            <div class="flex flex-wrap items-center gap-3">
+              {% if b.renew_count < max_renewals and not b.is_overdue %}
+                {{ post_button(url_for('user.renew', borrow_id=b.id), 'Gia hạn (%d/%d)'|format(b.renew_count, max_renewals),
+                               'px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700',
+                               'Gia hạn thêm %d ngày?'|format(renew_days)) }}
+              {% else %}
+                <span class="px-4 py-2 bg-gray-100 text-gray-500 text-sm rounded-lg">{{ 'Quá hạn, không thể gia hạn' if b.is_overdue else 'Đã hết lượt gia hạn' }}</span>
+              {% endif %}
+              <span class="text-xs text-gray-500">Trả sách tại quầy thư viện</span>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    {% else %}
+      <div class="bg-white rounded-xl smooth-shadow p-12 text-center">
+        <p class="text-6xl mb-4">📭</p><p class="text-xl font-bold text-gray-800 mb-4">Bạn chưa mượn sách nào</p>
+        <a href="{{ url_for('main.books') }}" class="inline-block px-6 py-3 bg-indigo-600 text-white rounded-lg">Khám phá tài liệu</a>
+      </div>
+    {% endfor %}
+  </section>
+
+  <section data-panel="history" class="hidden">
+    <div class="bg-white rounded-xl smooth-shadow overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50"><tr>
+          <th class="px-6 py-3 text-left font-semibold text-gray-600">Tài liệu</th><th class="px-6 py-3 text-left font-semibold text-gray-600">Ngày mượn</th>
+          <th class="px-6 py-3 text-left font-semibold text-gray-600">Ngày trả</th><th class="px-6 py-3 text-left font-semibold text-gray-600">Trạng thái</th>
+          <th class="px-6 py-3 text-left font-semibold text-gray-600">Tiền phạt</th></tr></thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for b in history %}
+            <tr>
+              <td class="px-6 py-3"><a href="{{ url_for('main.book_detail', book_id=b.book_id) }}" class="font-medium text-gray-900 hover:text-indigo-600">{{ b.book.title }}</a></td>
+              <td class="px-6 py-3 text-gray-600">{{ b.borrow_date|date }}</td>
+              <td class="px-6 py-3 text-gray-600">{{ b.return_date|date or '-' }}</td>
+              <td class="px-6 py-3">{{ status_badge(b) }}{% if b.return_date and b.return_date > b.due_date %} <span class="text-xs text-red-600">trả trễ</span>{% endif %}</td>
+              <td class="px-6 py-3">{% if b.fine_amount %}<b class="{{ 'text-gray-500' if b.fine_paid else 'text-red-600' }}">{{ b.fine_amount|money }}</b> <span class="text-xs">({{ 'đã đóng' if b.fine_paid else 'chưa đóng' }})</span>{% else %}-{% endif %}</td>
+            </tr>
+          {% else %}<tr><td colspan="5" class="px-6 py-10 text-center text-gray-400">Chưa có lịch sử</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section data-panel="reading" class="hidden">
+    <div class="bg-white rounded-xl smooth-shadow overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50"><tr>
+          <th class="px-6 py-3 text-left font-semibold text-gray-600">Tài liệu</th><th class="px-6 py-3 text-left font-semibold text-gray-600">Hoạt động</th>
+          <th class="px-6 py-3 text-left font-semibold text-gray-600">Thời gian</th><th class="px-6 py-3"></th></tr></thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for log in reading %}
+            <tr>
+              <td class="px-6 py-3"><p class="font-medium text-gray-900">{{ log.book.title }}</p><p class="text-xs text-gray-500">{{ log.file.original_name if log.file }}</p></td>
+              <td class="px-6 py-3"><span class="px-2.5 py-1 rounded-full text-xs font-semibold {{ 'bg-emerald-100 text-emerald-700' if log.action == 'download' else 'bg-indigo-100 text-indigo-700' }}">{{ log.ACTION_LABELS[log.action] }}</span></td>
+              <td class="px-6 py-3 text-gray-600">{{ log.created_at|datetime }}</td>
+              <td class="px-6 py-3">{% if log.file_id %}<a href="{{ url_for('main.read', file_id=log.file_id) }}" class="text-indigo-600 font-medium">Đọc tiếp</a>{% endif %}</td>
+            </tr>
+          {% else %}<tr><td colspan="4" class="px-6 py-10 text-center text-gray-400">Bạn chưa đọc tài liệu số nào</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      const active = b === btn;
+      b.classList.toggle('border-indigo-600', active); b.classList.toggle('text-indigo-600', active);
+      b.classList.toggle('border-transparent', !active); b.classList.toggle('text-gray-600', !active);
+    });
+    document.querySelectorAll('[data-panel]').forEach(p => p.classList.toggle('hidden', p.dataset.panel !== btn.dataset.tab));
+  }));
+</script>
+{% endblock %}

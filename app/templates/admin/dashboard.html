@@ -1,0 +1,50 @@
+{% extends 'admin/base.html' %}
+{% from '_macros.html' import status_badge %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  {% for label, value, link in [
+      ('Đầu tài liệu', stats.books, url_for('admin.books')),
+      ('Tệp tài liệu số', stats.files, url_for('admin.books')),
+      ('Thành viên', stats.members, url_for('admin.users')),
+      ('Lượt đọc/tải tháng này', stats.reads_month, url_for('admin.access_logs')),
+      ('Đang mượn', stats.borrowing, url_for('admin.borrowing', status='borrowing')),
+      ('Quá hạn', stats.overdue, url_for('admin.borrowing', status='overdue')),
+      ('Chờ lấy sách', stats.pending, url_for('admin.borrowing', status='pending')),
+  ] %}
+    <a href="{{ link }}" class="bg-white rounded-xl shadow-sm hover:shadow-md transition p-5 border border-gray-100 block">
+      <p class="text-sm text-gray-600">{{ label }}</p>
+      <p class="text-3xl font-bold text-gray-900 mt-1">{{ value }}</p>
+    </a>
+  {% endfor %}
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100">
+    <div class="p-5 border-b border-gray-100 flex justify-between items-center">
+      <h2 class="font-bold text-gray-900">Tài liệu mới thêm</h2>
+      <a href="{{ url_for('admin.book_form') }}" class="text-sm text-indigo-600 font-medium">+ Thêm tài liệu</a>
+    </div>
+    <table class="w-full text-sm">
+      <tbody class="divide-y divide-gray-100">
+        {% for b in recent_books %}
+          <tr><td class="px-5 py-3 font-medium text-gray-900">{{ b.title }}</td>
+              <td class="px-5 py-3 text-gray-600">{{ b.author_name or 'N/A' }}</td>
+              <td class="px-5 py-3 text-gray-600">{{ b.files|length }} tệp số</td>
+              <td class="px-5 py-3"><a href="{{ url_for('admin.book_form', book_id=b.id) }}" class="text-indigo-600 font-medium">Sửa</a></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+    <h2 class="p-5 border-b border-gray-100 font-bold text-gray-900">Hoạt động mượn trả gần đây</h2>
+    <ul class="p-5 space-y-4">
+      {% for b in recent_borrows %}
+        <li><p class="text-sm font-medium text-gray-900">{{ b.user.full_name }}</p>
+            <p class="text-sm text-gray-600 truncate">{{ b.book.title }}</p>
+            <p class="mt-1 flex items-center gap-2">{{ status_badge(b) }}<span class="text-xs text-gray-500">{{ b.updated_at|datetime }}</span></p></li>
+      {% else %}<li class="text-sm text-gray-400">Chưa có hoạt động</li>{% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends 'admin/base.html' %}
+{% from '_macros.html' import pagination as paginate %}
+{% block title %}Quản lý người dùng{% endblock %}
+{% block content %}
+{% set status_labels = {'active': 'Hoạt động', 'inactive': 'Tạm ngưng', 'banned': 'Bị khóa'} %}
+<div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+  <form method="get" class="flex flex-wrap gap-2">
+    <label for="search" class="sr-only">Tìm kiếm</label>
+    <input id="search" name="search" value="{{ search }}" placeholder="Tên, email, tên đăng nhập..." class="px-4 py-2 border border-gray-300 rounded-lg text-sm w-64">
+    <select name="role" aria-label="Vai trò" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+      <option value="">Tất cả vai trò</option><option value="admin" {{ 'selected' if role == 'admin' }}>Quản trị</option><option value="member" {{ 'selected' if role == 'member' }}>Thành viên</option>
+    </select>
+    <select name="status" aria-label="Trạng thái" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+      <option value="">Tất cả trạng thái</option>
+      {% for k, v in status_labels.items() %}<option value="{{ k }}" {{ 'selected' if status == k }}>{{ v }}</option>{% endfor %}
+    </select>
+    <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Lọc</button>
+  </form>
+  <a href="{{ url_for('admin.export', kind='users') }}" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium">⬇ Xuất Excel</a>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-gray-50"><tr>
+      <th class="px-5 py-3 text-left font-semibold text-gray-600">Người dùng</th><th class="px-5 py-3 text-left font-semibold text-gray-600">Email</th>
+      <th class="px-5 py-3 text-left font-semibold text-gray-600">Vai trò</th><th class="px-5 py-3 text-left font-semibold text-gray-600">Trạng thái</th>
+      <th class="px-5 py-3 text-left font-semibold text-gray-600">Ngày tham gia</th><th class="px-5 py-3"></th></tr></thead>
+    <tbody class="divide-y divide-gray-100">
+      {% for u in pagination.items %}
+        <tr class="hover:bg-gray-50 {{ 'opacity-60' if u.status == 'banned' }}">
+          <td class="px-5 py-3"><div class="flex items-center gap-3">
+            <span class="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 text-white text-xs font-bold flex items-center justify-center">{{ u.initials }}</span>
+            <div><p class="font-medium text-gray-900">{{ u.full_name }}</p><p class="text-xs text-gray-500">@{{ u.username }}</p></div></div></td>
+          <td class="px-5 py-3 text-gray-700">{{ u.email }}</td>
+          {% for field, options in [('role', [('admin', 'Quản trị'), ('member', 'Thành viên')]), ('status', status_labels.items())] %}
+            <td class="px-5 py-3">
+              <form method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="user_id" value="{{ u.id }}"><input type="hidden" name="field" value="{{ field }}">
+                <select name="value" aria-label="{{ 'Vai trò' if field == 'role' else 'Trạng thái' }} của {{ u.username }}"
+                        onchange="if (confirm('Xác nhận thay đổi?')) this.form.submit(); else this.form.reset();"
+                        class="px-2 py-1 text-xs font-semibold rounded border border-gray-200">
+                  {% for k, v in options %}<option value="{{ k }}" {{ 'selected' if u[field] == k }}>{{ v }}</option>{% endfor %}
+                </select>
+              </form>
+            </td>
+          {% endfor %}
+          <td class="px-5 py-3 text-gray-600">{{ u.created_at|date }}</td>
+          <td class="px-5 py-3"><a href="{{ url_for('admin.user_detail', user_id=u.id) }}" class="text-indigo-600 font-medium">Chi tiết</a></td>
+        </tr>
+      {% else %}<tr><td colspan="6" class="px-5 py-12 text-center text-gray-400">Không tìm thấy người dùng</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{{ paginate(pagination) }}
+{% endblock %}

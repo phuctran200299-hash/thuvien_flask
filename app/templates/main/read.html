@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}Đọc: {{ doc.book.title }}{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+    <div class="min-w-0">
+      <h1 class="text-xl font-bold text-gray-900 truncate">{{ doc.book.title }}</h1>
+      <p class="text-sm text-gray-600 truncate">{{ doc.book.author_name or 'Không rõ tác giả' }} · {{ doc.original_name }} · {{ doc.file_size|filesize }}</p>
+    </div>
+    <div class="flex flex-wrap gap-2 flex-shrink-0">
+      {% for other in others %}
+        <a href="{{ url_for('main.read', file_id=other.id) }}" class="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50" title="{{ other.original_name }}">Tệp khác: {{ other.original_name|truncate(24, True, '…') }}</a>
+      {% endfor %}
+      {% if can_download %}
+        <a href="{{ url_for('main.document', file_id=doc.id, download=1) }}" class="px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700">⬇ Tải về</a>
+      {% else %}
+        <span class="px-4 py-2 bg-gray-100 text-gray-500 text-sm font-medium rounded-lg">Chỉ đọc trực tuyến</span>
+      {% endif %}
+      <a href="{{ url_for('main.book_detail', book_id=doc.book_id) }}" class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50">← Quay lại</a>
+    </div>
+  </div>
+  {% if doc.previewable %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" style="height: 80vh">
+      <iframe src="{{ url_for('main.document', file_id=doc.id) }}#toolbar={{ 1 if can_download else 0 }}" title="{{ doc.book.title }}" class="w-full h-full border-0"></iframe>
+    </div>
+  {% else %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+      <p class="text-5xl mb-4">📄</p>
+      <h2 class="text-xl font-bold text-gray-800 mb-2">Định dạng {{ doc.extension }} chưa hỗ trợ xem trực tiếp trên trình duyệt</h2>
+      <p class="text-gray-600">{{ 'Vui lòng tải về để đọc.' if can_download else 'Tài liệu không cho phép tải về, vui lòng liên hệ thư viện.' }}</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

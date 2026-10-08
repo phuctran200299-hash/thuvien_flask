@@ -1,0 +1,40 @@
+{% extends 'admin/base.html' %}
+{% from '_macros.html' import status_badge %}
+{% block title %}Chi tiết người dùng{% endblock %}
+{% block content %}
+<a href="{{ url_for('admin.users') }}" class="text-sm text-gray-600 hover:text-indigo-600">← Danh sách người dùng</a>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center h-fit">
+    <span class="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 text-white text-2xl font-bold flex items-center justify-center mb-3">{{ user.initials }}</span>
+    <h2 class="text-xl font-bold text-gray-900">{{ user.full_name }}</h2>
+    <p class="text-sm text-gray-500">@{{ user.username }}</p>
+    <dl class="mt-4 text-sm text-left space-y-2">
+      <div class="flex justify-between"><dt class="text-gray-500">Email</dt><dd class="text-gray-900 break-all">{{ user.email }}</dd></div>
+      <div class="flex justify-between"><dt class="text-gray-500">Điện thoại</dt><dd class="text-gray-900">{{ user.phone or '-' }}</dd></div>
+      <div class="flex justify-between"><dt class="text-gray-500">Vai trò</dt><dd class="text-gray-900">{{ 'Quản trị' if user.is_admin else 'Thành viên' }}</dd></div>
+      <div class="flex justify-between"><dt class="text-gray-500">Trạng thái</dt><dd class="text-gray-900">{{ user.status }}</dd></div>
+      <div class="flex justify-between"><dt class="text-gray-500">Tham gia</dt><dd class="text-gray-900">{{ user.created_at|date }}</dd></div>
+    </dl>
+  </div>
+  <div class="lg:col-span-2 space-y-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+      <h3 class="p-5 border-b border-gray-100 font-bold text-gray-900">Lịch sử mượn ({{ borrowings|length }})</h3>
+      <table class="w-full text-sm"><tbody class="divide-y divide-gray-100">
+        {% for b in borrowings %}
+          <tr><td class="px-5 py-3 font-medium text-gray-900">{{ b.book.title }}</td><td class="px-5 py-3 text-gray-600">{{ b.borrow_date|date }} → {{ b.due_date|date }}</td>
+              <td class="px-5 py-3">{{ status_badge(b) }}</td><td class="px-5 py-3">{{ b.fine_amount|money if b.fine_amount else '' }}</td></tr>
+        {% else %}<tr><td class="px-5 py-8 text-center text-gray-400">Chưa mượn sách</td></tr>{% endfor %}
+      </tbody></table>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+      <h3 class="p-5 border-b border-gray-100 font-bold text-gray-900">Truy cập tài liệu gần đây</h3>
+      <table class="w-full text-sm"><tbody class="divide-y divide-gray-100">
+        {% for log in logs %}
+          <tr><td class="px-5 py-3 text-gray-600">{{ log.created_at|datetime }}</td><td class="px-5 py-3 font-medium text-gray-900">{{ log.book.title }}</td>
+              <td class="px-5 py-3">{{ log.ACTION_LABELS[log.action] }}</td></tr>
+        {% else %}<tr><td class="px-5 py-8 text-center text-gray-400">Chưa có lượt truy cập</td></tr>{% endfor %}
+      </tbody></table>
+    </div>
+  </div>
+</div>
+{% endblock %}

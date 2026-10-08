@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import book_card, pagination as paginate %}
+{% block title %}Tra cứu tài liệu{% endblock %}
+{% block content %}
+{% set input = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm' %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <h1 class="text-3xl font-bold text-gray-900 mb-1">Tra cứu tài liệu</h1>
+  <p class="text-gray-600 mb-8">Tìm theo tên, tác giả, danh mục, năm xuất bản và từ khóa</p>
+
+  <form method="get" class="flex flex-col lg:flex-row gap-6">
+    <aside class="lg:w-64 space-y-4 flex-shrink-0">
+      <div class="bg-white rounded-xl smooth-shadow p-4">
+        <label for="search" class="font-semibold text-gray-900 block mb-2">Từ khóa</label>
+        <input id="search" name="search" value="{{ f.search }}" placeholder="Tên, tác giả, ISBN, từ khóa..." class="{{ input }}">
+      </div>
+      <div class="bg-white rounded-xl smooth-shadow p-4">
+        <p class="font-semibold text-gray-900 mb-2">Danh mục</p>
+        <div class="space-y-1 max-h-60 overflow-y-auto">
+          {% for cat, count in categories %}
+            <label class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-lg text-sm">
+              <input type="checkbox" name="category" value="{{ cat.id }}" {{ 'checked' if cat.id in f.category_ids }} class="w-4 h-4 text-indigo-600 rounded">
+              <span class="text-gray-700">{{ cat.name }}</span><span class="ml-auto text-xs text-gray-500">{{ count }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="bg-white rounded-xl smooth-shadow p-4 space-y-3">
+        <div>
+          <label for="author" class="font-semibold text-gray-900 block mb-2">Tác giả</label>
+          <select id="author" name="author" class="{{ input }}">
+            <option value="0">Tất cả</option>
+            {% for a in authors %}<option value="{{ a.id }}" {{ 'selected' if f.author == a.id }}>{{ a.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="publisher" class="font-semibold text-gray-900 block mb-2">Nhà xuất bản</label>
+          <select id="publisher" name="publisher" class="{{ input }}">
+            <option value="0">Tất cả</option>
+            {% for p in publishers %}<option value="{{ p.id }}" {{ 'selected' if f.publisher == p.id }}>{{ p.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <p class="font-semibold text-gray-900 mb-2">Năm xuất bản</p>
+          <div class="flex items-center gap-2">
+            <input type="number" name="year_from" min="1000" max="2100" value="{{ f.year_from }}" placeholder="Từ" aria-label="Từ năm" class="{{ input }}">
+            <span class="text-gray-400">-</span>
+            <input type="number" name="year_to" min="1000" max="2100" value="{{ f.year_to }}" placeholder="Đến" aria-label="Đến năm" class="{{ input }}">
+          </div>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl smooth-shadow p-4 space-y-1">
+        <p class="font-semibold text-gray-900 mb-2">Tình trạng</p>
+        {% for value, label in [('all', 'Tất cả'), ('available', 'Còn bản giấy'), ('unavailable', 'Hết bản giấy')] %}
+          <label class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-lg text-sm">
+            <input type="radio" name="availability" value="{{ value }}" {{ 'checked' if f.availability == value }} class="w-4 h-4 text-indigo-600"> {{ label }}
+          </label>
+        {% endfor %}
+        <label class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-lg text-sm border-t border-gray-100 mt-2 pt-3">
+          <input type="checkbox" name="digital" value="1" {{ 'checked' if f.digital }} class="w-4 h-4 text-indigo-600 rounded"> Chỉ tài liệu có bản số
+        </label>
+      </div>
+      <button class="w-full px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg">Áp dụng bộ lọc</button>
+      <a href="{{ url_for('main.books') }}" class="block text-center text-sm text-gray-500 hover:text-indigo-600">Xóa bộ lọc</a>
+    </aside>
+
+    <div class="flex-1 min-w-0">
+      <div class="bg-white rounded-xl smooth-shadow p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <p class="text-sm text-gray-600">Tìm thấy <span class="font-semibold text-gray-900">{{ pagination.total }} kết quả</span></p>
+        <div class="flex items-center gap-2">
+          <label for="sort" class="text-sm text-gray-600">Sắp xếp:</label>
+          <select id="sort" name="sort" onchange="this.form.submit()" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            {% for key, (label, _) in sort_options.items() %}<option value="{{ key }}" {{ 'selected' if f.sort == key }}>{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      {% if pagination.items %}
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
+          {% for book in pagination.items %}{{ book_card(book) }}{% endfor %}
+        </div>
+        {{ paginate(pagination) }}
+      {% else %}
+        <div class="bg-white rounded-2xl smooth-shadow p-12 text-center">
+          <p class="text-6xl mb-4">📭</p>
+          <h2 class="text-2xl font-bold text-gray-800 mb-2">Không tìm thấy tài liệu</h2>
+          <p class="text-gray-600">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
+        </div>
+      {% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

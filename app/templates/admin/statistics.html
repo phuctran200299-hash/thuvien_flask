@@ -1,0 +1,94 @@
+{% extends 'admin/base.html' %}
+{% block title %}Thống kê & báo cáo{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+  <p class="text-gray-600">Số liệu cập nhật lúc {{ now_str }}</p>
+  <div class="flex flex-wrap gap-2 no-print">
+    {% for kind, label in [('books', 'Tài liệu'), ('borrowing', 'Mượn trả'), ('users', 'Người dùng'), ('access_logs', 'Truy cập')] %}
+      <a href="{{ url_for('admin.export', kind=kind) }}" class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50">⬇ {{ label }} (Excel)</a>
+    {% endfor %}
+    <button type="button" onclick="window.print()" class="px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">🖨 In / Lưu PDF</button>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-xl shadow-sm p-5 border border-gray-100"><p class="text-sm text-gray-600">Lượt đọc (30 ngày)</p><p class="text-2xl font-bold">{{ access_totals.read }}</p></div>
+  <div class="bg-white rounded-xl shadow-sm p-5 border border-gray-100"><p class="text-sm text-gray-600">Lượt tải (30 ngày)</p><p class="text-2xl font-bold">{{ access_totals.download }}</p></div>
+  <div class="bg-white rounded-xl shadow-sm p-5 border border-gray-100"><p class="text-sm text-gray-600">Tiền phạt đã thu</p><p class="text-2xl font-bold">{{ fines.paid|money }}</p></div>
+  <a href="{{ url_for('admin.borrowing', status='unpaid') }}" class="bg-white rounded-xl shadow-sm p-5 border border-gray-100 block"><p class="text-sm text-gray-600">Tiền phạt chưa thu</p><p class="text-2xl font-bold">{{ fines.unpaid|money }}</p></a>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <h2 class="text-lg font-bold text-gray-900">Lượt mượn sách theo tháng</h2>
+    <p class="text-sm text-gray-500 mb-4">12 tháng gần nhất, không tính phiếu đã hủy</p>
+    <div class="relative h-72"><canvas id="chart-monthly" role="img" aria-label="Biểu đồ lượt mượn theo tháng"></canvas></div>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <h2 class="text-lg font-bold text-gray-900">Truy cập tài liệu số</h2>
+    <p class="text-sm text-gray-500 mb-4">30 ngày gần nhất, theo loại hoạt động</p>
+    <div class="relative h-72"><canvas id="chart-access" role="img" aria-label="Biểu đồ truy cập tài liệu số"></canvas></div>
+    <table class="w-full mt-4 text-sm">
+      <caption class="sr-only">Tổng lượt truy cập 30 ngày</caption>
+      <tr class="text-gray-500"><th class="text-left font-medium">Hoạt động</th><th class="text-right font-medium">Tổng</th></tr>
+      <tr><td>Đọc trực tuyến</td><td class="text-right font-semibold">{{ access_totals.read }}</td></tr>
+      <tr><td>Tải về</td><td class="text-right font-semibold">{{ access_totals.download }}</td></tr>
+      <tr><td>Xem thông tin</td><td class="text-right font-semibold">{{ access_totals.view }}</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+    <h2 class="p-5 border-b border-gray-100 font-bold text-gray-900">Tài liệu số được đọc/tải nhiều</h2>
+    <table class="w-full text-sm"><thead class="text-gray-500"><tr><th class="px-5 py-2 text-left font-medium">Tài liệu</th><th class="px-2 py-2 text-right font-medium">Đọc</th><th class="px-5 py-2 text-right font-medium">Tải</th></tr></thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for book, reads, downloads in top_docs %}<tr><td class="px-5 py-2">{{ book.title }}</td><td class="px-2 py-2 text-right font-semibold">{{ reads }}</td><td class="px-5 py-2 text-right font-semibold">{{ downloads }}</td></tr>
+        {% else %}<tr><td colspan="3" class="px-5 py-6 text-center text-gray-400">Chưa có dữ liệu</td></tr>{% endfor %}
+      </tbody></table>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+    <h2 class="p-5 border-b border-gray-100 font-bold text-gray-900">Sách giấy được mượn nhiều</h2>
+    <table class="w-full text-sm"><tbody class="divide-y divide-gray-100">
+      {% for book, n in top_borrowed %}<tr><td class="px-5 py-2">{{ book.title }}</td><td class="px-5 py-2 text-right font-semibold">{{ n }} lượt</td></tr>
+      {% else %}<tr><td class="px-5 py-6 text-center text-gray-400">Chưa có dữ liệu</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+    <h2 class="p-5 border-b border-gray-100 font-bold text-gray-900">Tài liệu theo danh mục</h2>
+    <table class="w-full text-sm"><tbody class="divide-y divide-gray-100">
+      {% for name, n in by_category %}<tr><td class="px-5 py-2">{{ name }}</td><td class="px-5 py-2 text-right font-semibold">{{ n }}</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function () {
+  if (typeof Chart === 'undefined') return;
+  // Bảng màu phân loại theo thứ tự cố định (đã kiểm tra an toàn cho người mù màu)
+  const SERIES = ['#2a78d6', '#eb6834', '#1baf7a'], GRID = '#ecebe8';
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.color = '#52514e';
+  const monthly = {{ monthly|tojson }};
+  new Chart(document.getElementById('chart-monthly'), {
+    type: 'bar',
+    data: { labels: monthly.map(m => m.label), datasets: [{ label: 'Lượt mượn', data: monthly.map(m => m.value), backgroundColor: SERIES[0], borderRadius: 4, maxBarThickness: 28 }] },
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false } },
+      scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: GRID }, border: { display: false } } } }
+  });
+  const access = {{ access|tojson }};
+  const series = [['read', 'Đọc trực tuyến', 'circle'], ['download', 'Tải về', 'rectRot'], ['view', 'Xem thông tin', 'triangle']];
+  new Chart(document.getElementById('chart-access'), {
+    type: 'line',
+    data: { labels: {{ access_days|tojson }}, datasets: series.map(([key, label, point], i) => ({
+      label, data: access[key], borderColor: SERIES[i], backgroundColor: SERIES[i], borderWidth: 2,
+      pointStyle: point, pointRadius: 3, pointHoverRadius: 5, tension: 0.25 })) },
+    options: { maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { position: 'top', align: 'start', labels: { usePointStyle: true, boxWidth: 8 } } },
+      scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } }, y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: GRID }, border: { display: false } } } }
+  });
+})();
+</script>
+{% endblock %}

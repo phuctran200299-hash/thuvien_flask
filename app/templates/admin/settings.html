@@ -1,0 +1,32 @@
+{% extends 'admin/base.html' %}
+{% block title %}Cài đặt hệ thống{% endblock %}
+{% block content %}
+{% set input = 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent' %}
+{% set groups = [
+  ('Thông tin thư viện', ['site_name', 'site_description', 'contact_email', 'contact_phone', 'contact_address', 'opening_hours']),
+  ('Quy định mượn - trả', ['max_borrow_days', 'max_books_per_user', 'max_renewals', 'renew_days', 'pending_expire_days', 'fine_per_day']),
+] %}
+<form method="post" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-8 max-w-4xl">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {% for group, keys in groups %}
+    <fieldset>
+      <legend class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b w-full">{{ group }}</legend>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {% for key in keys if key in settings %}
+          {% set s = settings[key] %}
+          <div class="{{ 'md:col-span-2' if s.type == 'textarea' }}">
+            <label for="{{ key }}" class="block text-sm font-semibold text-gray-700 mb-1">{{ s.description }}</label>
+            {% if s.type == 'textarea' %}
+              <textarea id="{{ key }}" name="{{ key }}" rows="2" class="{{ input }}">{{ s.value or '' }}</textarea>
+            {% else %}
+              <input id="{{ key }}" name="{{ key }}" value="{{ s.value or '' }}" class="{{ input }}"
+                     type="{{ {'number': 'number', 'email': 'email', 'url': 'url'}.get(s.type, 'text') }}" {{ 'min=0' if s.type == 'number' }}>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </fieldset>
+  {% endfor %}
+  <button class="px-6 py-2.5 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700">Lưu cài đặt</button>
+</form>
+{% endblock %}

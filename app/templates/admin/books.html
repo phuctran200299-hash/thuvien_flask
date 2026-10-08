@@ -1,0 +1,53 @@
+{% extends 'admin/base.html' %}
+{% from '_macros.html' import pagination as paginate, post_button %}
+{% block title %}Quản lý tài liệu{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+  <form method="get" class="flex flex-wrap gap-2">
+    <label for="search" class="sr-only">Tìm kiếm</label>
+    <input id="search" name="search" value="{{ search }}" placeholder="Tên, tác giả, ISBN, từ khóa..." class="px-4 py-2 border border-gray-300 rounded-lg text-sm w-64">
+    <label for="category" class="sr-only">Danh mục</label>
+    <select id="category" name="category" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+      <option value="0">Tất cả danh mục</option>
+      {% for c in categories %}<option value="{{ c.id }}" {{ 'selected' if category == c.id }}>{{ c.name }}</option>{% endfor %}
+    </select>
+    <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Tìm</button>
+  </form>
+  <div class="flex gap-2">
+    <a href="{{ url_for('admin.export', kind='books') }}" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">⬇ Xuất Excel</a>
+    <a href="{{ url_for('admin.book_form') }}" class="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg text-sm font-medium">+ Thêm tài liệu</a>
+  </div>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-gray-50 border-b border-gray-100"><tr>
+      <th class="px-5 py-3 text-left font-semibold text-gray-600">ID</th><th class="px-5 py-3 text-left font-semibold text-gray-600">Tài liệu</th>
+      <th class="px-5 py-3 text-left font-semibold text-gray-600">Tác giả</th><th class="px-5 py-3 text-left font-semibold text-gray-600">Danh mục</th>
+      <th class="px-5 py-3 text-left font-semibold text-gray-600">Bản giấy</th><th class="px-5 py-3 text-left font-semibold text-gray-600">Bản số</th>
+      <th class="px-5 py-3 text-left font-semibold text-gray-600">Thao tác</th></tr></thead>
+    <tbody class="divide-y divide-gray-100">
+      {% for b in pagination.items %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-5 py-3 text-gray-500">#{{ b.id }}</td>
+          <td class="px-5 py-3"><p class="font-medium text-gray-900">{{ b.title }}</p>{% if b.isbn %}<p class="text-xs text-gray-500">ISBN: {{ b.isbn }}</p>{% endif %}</td>
+          <td class="px-5 py-3 text-gray-600">{{ b.author_name or 'N/A' }}</td>
+          <td class="px-5 py-3"><span class="px-2.5 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-full">{{ b.category.name if b.category else 'N/A' }}</span></td>
+          <td class="px-5 py-3"><b class="{{ 'text-emerald-600' if b.available else 'text-red-600' }}">{{ b.available }}</b> / {{ b.quantity }}</td>
+          <td class="px-5 py-3">
+            {% if b.files %}<span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded">{{ b.files|length }} tệp</span>
+              <span class="block text-xs text-gray-500 mt-1">{{ 'Công khai' if b.access_level == 'public' else 'Thành viên' }}, {{ 'cho tải' if b.allow_download else 'chỉ đọc' }}</span>
+            {% else %}<span class="text-xs text-gray-400">Chưa có</span>{% endif %}
+          </td>
+          <td class="px-5 py-3 whitespace-nowrap">
+            <a href="{{ url_for('admin.book_form', book_id=b.id) }}" class="text-indigo-600 font-medium">Sửa</a>
+            <span class="text-gray-300">|</span>
+            {{ post_button(url_for('admin.book_delete', book_id=b.id), 'Xóa', 'text-red-600 font-medium', 'Xóa tài liệu này và toàn bộ tệp số đi kèm?') }}
+          </td>
+        </tr>
+      {% else %}<tr><td colspan="7" class="px-5 py-12 text-center text-gray-400">Không tìm thấy tài liệu</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{{ paginate(pagination) }}
+{% endblock %}

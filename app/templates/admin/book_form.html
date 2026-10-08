@@ -1,0 +1,100 @@
+{% extends 'admin/base.html' %}
+{% from '_macros.html' import cover_url, post_button %}
+{% block title %}{{ 'Sửa tài liệu' if book else 'Thêm tài liệu' }}{% endblock %}
+{% block content %}
+{% set input = 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent' %}
+{# Ưu tiên giá trị vừa nhập (khi form lỗi), sau đó tới dữ liệu đang có #}
+{% macro val(name, current) %}{{ form.get(name) if form.get(name) is not none else (current if current is not none else '') }}{% endmacro %}
+
+<a href="{{ url_for('admin.books') }}" class="text-sm text-gray-600 hover:text-indigo-600">← Danh sách tài liệu</a>
+<form method="post" enctype="multipart/form-data" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-4 space-y-6">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="md:col-span-2">
+      <label for="title" class="block text-sm font-semibold text-gray-700 mb-2">Tên tài liệu *</label>
+      <input id="title" name="title" required maxlength="200" value="{{ val('title', book.title if book) }}" class="{{ input }}">
+    </div>
+    <div>
+      <label for="author_name" class="block text-sm font-semibold text-gray-700 mb-2">Tác giả</label>
+      <input id="author_name" name="author_name" list="author-list" maxlength="150" value="{{ val('author_name', book.author_name if book) }}" class="{{ input }}" placeholder="Chọn hoặc nhập tác giả mới">
+      <datalist id="author-list">{% for a in authors %}<option value="{{ a.name }}">{% endfor %}</datalist>
+      <p class="text-xs text-gray-500 mt-1">Tên chưa có sẽ được tự động thêm vào danh sách tác giả</p>
+    </div>
+    <div>
+      <label for="publisher_name" class="block text-sm font-semibold text-gray-700 mb-2">Nhà xuất bản</label>
+      <input id="publisher_name" name="publisher_name" list="publisher-list" maxlength="150" value="{{ val('publisher_name', book.publisher_name if book) }}" class="{{ input }}" placeholder="Chọn hoặc nhập NXB mới">
+      <datalist id="publisher-list">{% for p in publishers %}<option value="{{ p.name }}">{% endfor %}</datalist>
+    </div>
+    <div>
+      <label for="publish_year" class="block text-sm font-semibold text-gray-700 mb-2">Năm xuất bản</label>
+      <input id="publish_year" name="publish_year" type="number" min="1000" max="2100" value="{{ val('publish_year', book.publish_year if book) }}" class="{{ input }}">
+    </div>
+    <div>
+      <label for="isbn" class="block text-sm font-semibold text-gray-700 mb-2">ISBN</label>
+      <input id="isbn" name="isbn" maxlength="20" value="{{ val('isbn', book.isbn if book) }}" class="{{ input }}">
+    </div>
+    <div>
+      <label for="category_id" class="block text-sm font-semibold text-gray-700 mb-2">Danh mục</label>
+      {% set selected_cat = (form.get('category_id')|int) if form.get('category_id') else (book.category_id if book else 0) %}
+      <select id="category_id" name="category_id" class="{{ input }}">
+        <option value="">-- Chọn danh mục --</option>
+        {% for c in categories %}<option value="{{ c.id }}" {{ 'selected' if selected_cat == c.id }}>{{ c.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="keywords" class="block text-sm font-semibold text-gray-700 mb-2">Từ khóa (cách nhau bởi dấu phẩy)</label>
+      <input id="keywords" name="keywords" maxlength="255" value="{{ val('keywords', book.keywords if book) }}" class="{{ input }}" placeholder="VD: lập trình, cơ sở dữ liệu">
+    </div>
+    <div>
+      <label for="quantity" class="block text-sm font-semibold text-gray-700 mb-2">Số lượng bản giấy *</label>
+      <input id="quantity" name="quantity" type="number" min="0" required value="{{ val('quantity', book.quantity if book else 0) }}" class="{{ input }}">
+      {% if book %}<p class="text-xs text-gray-500 mt-1">Còn trong kho: <b>{{ book.available }}</b> ({{ book.quantity - book.available }} cuốn đang được mượn/giữ). Số còn lại được tự động tính.</p>{% endif %}
+    </div>
+    <div>
+      <label for="access_level" class="block text-sm font-semibold text-gray-700 mb-2">Quyền đọc tài liệu số</label>
+      <select id="access_level" name="access_level" class="{{ input }}">
+        <option value="member" {{ 'selected' if not book or book.access_level == 'member' }}>Chỉ thành viên đã đăng nhập</option>
+        <option value="public" {{ 'selected' if book and book.access_level == 'public' }}>Công khai (khách cũng đọc được)</option>
+      </select>
+      <label class="flex items-center gap-2 mt-3 text-sm text-gray-700">
+        <input type="checkbox" name="allow_download" value="1" {{ 'checked' if not book or book.allow_download }} class="w-4 h-4 text-indigo-600 rounded"> Cho phép tải tệp về máy
+      </label>
+    </div>
+    <div class="md:col-span-2">
+      <label for="image" class="block text-sm font-semibold text-gray-700 mb-2">Ảnh bìa (JPG, PNG, GIF, WEBP - tối đa 5MB)</label>
+      {% if book and book.image %}<img src="{{ cover_url(book.image) }}" alt="Ảnh bìa hiện tại" class="h-32 rounded-lg border border-gray-200 mb-3">{% endif %}
+      <input id="image" name="image" type="file" accept="image/jpeg,image/png,image/gif,image/webp" class="{{ input }}">
+    </div>
+    <div class="md:col-span-2">
+      <label for="documents" class="block text-sm font-semibold text-gray-700 mb-2">Tệp tài liệu số (PDF, EPUB, DOC, DOCX, TXT - tối đa 50MB/tệp, chọn được nhiều tệp)</label>
+      <input id="documents" name="documents" type="file" multiple accept=".pdf,.epub,.doc,.docx,.txt" class="{{ input }}">
+    </div>
+    <div class="md:col-span-2">
+      <label for="description" class="block text-sm font-semibold text-gray-700 mb-2">Mô tả</label>
+      <textarea id="description" name="description" rows="4" class="{{ input }}">{{ val('description', book.description if book) }}</textarea>
+    </div>
+  </div>
+  <div class="flex gap-3 pt-4 border-t border-gray-200">
+    <button class="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-medium">Lưu</button>
+    <a href="{{ url_for('admin.books') }}" class="px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium">Hủy</a>
+  </div>
+</form>
+
+{% if book %}
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-6">
+  <h2 class="text-lg font-bold text-gray-900 mb-4">Tệp tài liệu số ({{ book.files|length }})</h2>
+  <ul class="divide-y divide-gray-100">
+    {% for f in book.files %}
+      <li class="flex items-center justify-between py-3 gap-4">
+        <div class="min-w-0"><p class="font-medium text-gray-900 truncate">{{ f.original_name }}</p>
+          <p class="text-xs text-gray-500">{{ f.mime_type }} · {{ f.file_size|filesize }} · {{ f.created_at|datetime }}</p></div>
+        <div class="flex items-center gap-3 flex-shrink-0">
+          <a href="{{ url_for('main.read', file_id=f.id) }}" target="_blank" class="text-indigo-600 text-sm font-medium">Xem</a>
+          {{ post_button(url_for('admin.file_delete', file_id=f.id), 'Xóa', 'text-red-600 text-sm font-medium', 'Xóa tệp này?') }}
+        </div>
+      </li>
+    {% else %}<li class="text-sm text-gray-500">Chưa có tệp số. Chọn tệp ở form phía trên rồi bấm Lưu.</li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endblock %}

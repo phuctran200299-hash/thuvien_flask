@@ -1,0 +1,112 @@
+{% from '_macros.html' import flash_toasts %}
+{% set site_name = get_setting('site_name', 'Thư viện số') %}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{% endblock %}{{ ' - ' if self.title() }}{{ site_name }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', system-ui, sans-serif; }
+    .glass-effect { background: rgba(255,255,255,.95); backdrop-filter: blur(10px); }
+    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .smooth-shadow { box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -1px rgba(0,0,0,.03); }
+    .smooth-shadow:hover { box-shadow: 0 10px 15px -3px rgba(0,0,0,.08), 0 4px 6px -2px rgba(0,0,0,.04); }
+    .book-card { transition: transform .3s ease; }
+    .book-card:hover { transform: translateY(-4px); }
+  </style>
+  <script src="{{ url_for('static', filename='js/toast.js') }}"></script>
+  {% block head %}{% endblock %}
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+{% set nav = [('main.index', 'Trang chủ'), ('main.books', 'Tài liệu')] %}
+<header class="sticky top-0 z-40 glass-effect shadow-sm">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16 gap-4">
+      <a href="{{ url_for('main.index') }}" class="flex items-center gap-3 min-w-0">
+        <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow flex-shrink-0 text-white text-xl">📚</span>
+        <span class="font-bold text-lg bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent truncate">{{ site_name }}</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-1">
+        {% for endpoint, label in nav %}
+          <a href="{{ url_for(endpoint) }}" class="px-4 py-2 text-sm font-medium rounded-lg {{ 'text-indigo-600 bg-indigo-50' if request.endpoint == endpoint else 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50' }}">{{ label }}</a>
+        {% endfor %}
+        {% if current_user.is_authenticated %}
+          <a href="{{ url_for('user.my_books') }}" class="px-4 py-2 text-sm font-medium rounded-lg {{ 'text-indigo-600 bg-indigo-50' if request.endpoint == 'user.my_books' else 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50' }}">Sách của tôi</a>
+          {% if current_user.is_admin %}
+            <a href="{{ url_for('admin.dashboard') }}" class="px-4 py-2 text-sm font-semibold rounded-lg text-amber-700 hover:bg-amber-50">Quản trị</a>
+          {% endif %}
+        {% endif %}
+      </nav>
+      <div class="flex items-center gap-2">
+        {% if current_user.is_authenticated %}
+          <details class="relative hidden md:block">
+            <summary class="list-none cursor-pointer flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg">
+              <span class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 text-white text-xs font-bold flex items-center justify-center">{{ current_user.initials }}</span>
+              <span>{{ current_user.full_name }}</span>
+            </summary>
+            <div class="absolute right-0 mt-2 w-52 bg-white rounded-lg shadow-lg py-2 border border-gray-100">
+              <a href="{{ url_for('user.profile') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50">Thông tin cá nhân</a>
+              <a href="{{ url_for('user.my_books') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50">Sách của tôi</a>
+              <form method="post" action="{{ url_for('auth.logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">Đăng xuất</button>
+              </form>
+            </div>
+          </details>
+        {% else %}
+          <a href="{{ url_for('auth.register') }}" class="hidden md:block px-4 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600">Đăng ký</a>
+          <a href="{{ url_for('auth.login') }}" class="px-5 py-2 text-sm font-semibold text-white whitespace-nowrap bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl hover:shadow-lg">Đăng nhập</a>
+        {% endif %}
+        <button type="button" class="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg" aria-label="Mở menu"
+                onclick="document.getElementById('mobile-menu').classList.toggle('hidden')">☰</button>
+      </div>
+    </div>
+    <nav id="mobile-menu" class="hidden md:hidden border-t border-gray-200 py-3 flex flex-col gap-1">
+      {% for endpoint, label in nav %}<a href="{{ url_for(endpoint) }}" class="px-4 py-2 text-sm text-gray-700 rounded-lg hover:bg-indigo-50">{{ label }}</a>{% endfor %}
+      {% if current_user.is_authenticated %}
+        <a href="{{ url_for('user.my_books') }}" class="px-4 py-2 text-sm text-gray-700 rounded-lg hover:bg-indigo-50">Sách của tôi</a>
+        <a href="{{ url_for('user.profile') }}" class="px-4 py-2 text-sm text-gray-700 rounded-lg hover:bg-indigo-50">Thông tin cá nhân</a>
+        {% if current_user.is_admin %}<a href="{{ url_for('admin.dashboard') }}" class="px-4 py-2 text-sm text-amber-700 rounded-lg hover:bg-amber-50">Quản trị</a>{% endif %}
+        <form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="w-full text-left px-4 py-2 text-sm text-red-600 rounded-lg hover:bg-red-50">Đăng xuất</button></form>
+      {% else %}
+        <a href="{{ url_for('auth.register') }}" class="px-4 py-2 text-sm text-gray-700 rounded-lg hover:bg-indigo-50">Đăng ký</a>
+      {% endif %}
+    </nav>
+  </div>
+</header>
+
+<main class="flex-1">{% block content %}{% endblock %}</main>
+
+<footer class="bg-gray-900 text-gray-300 py-12 mt-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+    <div>
+      <p class="text-white font-bold text-lg mb-2">{{ site_name }}</p>
+      <p class="text-sm leading-relaxed">{{ get_setting('site_description') }}</p>
+    </div>
+    <div>
+      <p class="text-white font-semibold mb-3">Khám phá</p>
+      <ul class="space-y-2 text-sm">
+        <li><a class="hover:text-white" href="{{ url_for('main.books') }}">Tra cứu tài liệu</a></li>
+        <li><a class="hover:text-white" href="{{ url_for('main.books', digital=1) }}">Tài liệu số</a></li>
+        <li><a class="hover:text-white" href="{{ url_for('main.books', sort='popular') }}">Tài liệu phổ biến</a></li>
+      </ul>
+    </div>
+    <div class="text-sm space-y-2">
+      <p class="text-white font-semibold mb-3">Liên hệ</p>
+      <p>📍 {{ get_setting('contact_address') }}</p>
+      <p>☎ {{ get_setting('contact_phone') }}</p>
+      <p>✉ {{ get_setting('contact_email') }}</p>
+      <p>🕒 {{ get_setting('opening_hours') }}</p>
+    </div>
+  </div>
+  <p class="text-center text-xs text-gray-500 mt-10">&copy; {{ get_setting('site_name') }}</p>
+</footer>
+{{ flash_toasts() }}
+{% block scripts %}{% endblock %}
+</body>
+</html>

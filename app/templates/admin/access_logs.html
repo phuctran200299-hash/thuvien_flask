@@ -1,0 +1,44 @@
+{% extends 'admin/base.html' %}
+{% from '_macros.html' import pagination as paginate %}
+{% block title %}Lịch sử truy cập tài liệu{% endblock %}
+{% block content %}
+{% set labels = {'view': 'Xem thông tin', 'read': 'Đọc trực tuyến', 'download': 'Tải về'} %}
+{% set badge = {'view': 'bg-gray-100 text-gray-700', 'read': 'bg-indigo-100 text-indigo-700', 'download': 'bg-emerald-100 text-emerald-700'} %}
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+  {% for key, label in labels.items() %}
+    <div class="bg-white rounded-xl shadow-sm p-5 border border-gray-100"><p class="text-sm text-gray-600">{{ label }} (30 ngày)</p><p class="text-3xl font-bold text-gray-900 mt-1">{{ summary[key] }}</p></div>
+  {% endfor %}
+</div>
+<form method="get" class="flex flex-wrap gap-2 mb-6">
+  <label for="search" class="sr-only">Tìm kiếm</label>
+  <input id="search" name="search" value="{{ search }}" placeholder="Tài liệu, người dùng..." class="px-4 py-2 border border-gray-300 rounded-lg text-sm w-64">
+  <select name="action" aria-label="Hoạt động" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+    <option value="">Tất cả hoạt động</option>
+    {% for key, label in labels.items() %}<option value="{{ key }}" {{ 'selected' if action == key }}>{{ label }}</option>{% endfor %}
+  </select>
+  <input type="date" name="from" value="{{ date_from }}" aria-label="Từ ngày" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+  <input type="date" name="to" value="{{ date_to }}" aria-label="Đến ngày" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+  <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Lọc</button>
+  <a href="{{ url_for('admin.export', kind='access_logs') }}" class="ml-auto px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium">⬇ Xuất Excel</a>
+</form>
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-gray-50"><tr>
+      <th class="px-5 py-3 text-left font-semibold text-gray-600">Thời gian</th><th class="px-5 py-3 text-left font-semibold text-gray-600">Người dùng</th>
+      <th class="px-5 py-3 text-left font-semibold text-gray-600">Tài liệu</th><th class="px-5 py-3 text-left font-semibold text-gray-600">Hoạt động</th>
+      <th class="px-5 py-3 text-left font-semibold text-gray-600">IP</th></tr></thead>
+    <tbody class="divide-y divide-gray-100">
+      {% for log in pagination.items %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-5 py-3 text-gray-600 whitespace-nowrap">{{ log.created_at|datetime('%d/%m/%Y %H:%M:%S') }}</td>
+          <td class="px-5 py-3">{% if log.user %}<a href="{{ url_for('admin.user_detail', user_id=log.user_id) }}" class="font-medium text-gray-900 hover:text-indigo-600">{{ log.user.full_name }}</a>{% else %}<span class="italic text-gray-500">Khách</span>{% endif %}</td>
+          <td class="px-5 py-3"><p class="font-medium text-gray-900">{{ log.book.title }}</p>{% if log.file %}<p class="text-xs text-gray-500">{{ log.file.original_name }}</p>{% endif %}</td>
+          <td class="px-5 py-3"><span class="px-2.5 py-1 rounded-full text-xs font-semibold {{ badge[log.action] }}">{{ labels[log.action] }}</span></td>
+          <td class="px-5 py-3 text-xs text-gray-500">{{ log.ip_address }}</td>
+        </tr>
+      {% else %}<tr><td colspan="5" class="px-5 py-12 text-center text-gray-400">Không có dữ liệu</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{{ paginate(pagination) }}
+{% endblock %}

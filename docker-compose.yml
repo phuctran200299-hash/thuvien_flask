@@ -1,0 +1,41 @@
+# Chạy toàn bộ hệ thống (SQL Server 2022 + web) bằng 1 lệnh:
+#   docker compose up -d --build
+# Web: http://localhost:8000   (admin / password123)
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "ThuVien@2026"
+      MSSQL_COLLATION: Vietnamese_CI_AS
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql_data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      retries: 20
+
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      SECRET_KEY: doi-chuoi-nay-khi-trien-khai
+      DB_HOST: sqlserver
+      DB_PORT: 1433
+      DB_USER: sa
+      DB_PASS: "ThuVien@2026"
+      DB_NAME: library_management
+    volumes:
+      - documents:/app/storage/documents
+      - uploads:/app/app/static/uploads
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+volumes:
+  mssql_data:
+  documents:
+  uploads:

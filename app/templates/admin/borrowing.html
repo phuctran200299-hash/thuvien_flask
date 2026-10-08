@@ -1,0 +1,61 @@
+{% extends 'admin/base.html' %}
+{% from '_macros.html' import pagination as paginate, post_button, status_badge %}
+{% block title %}Quản lý mượn / trả{% endblock %}
+{% block content %}
+<div class="flex flex-wrap gap-2 mb-4">
+  {% for key, label in filters.items() %}
+    <a href="{{ url_for('admin.borrowing', status=key, search=search or None) }}"
+       class="px-4 py-2 rounded-lg text-sm font-medium {{ 'bg-indigo-600 text-white' if status == key else 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50' }}">{{ label }} ({{ counts[key] }})</a>
+  {% endfor %}
+  <a href="{{ url_for('admin.export', kind='borrowing') }}" class="ml-auto px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium">⬇ Xuất Excel</a>
+</div>
+<form method="get" class="flex gap-2 mb-6">
+  <input type="hidden" name="status" value="{{ status }}">
+  <label for="search" class="sr-only">Tìm kiếm</label>
+  <input id="search" name="search" value="{{ search }}" placeholder="Tên người mượn, email, tên sách..." class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm">
+  <button class="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Tìm</button>
+</form>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-gray-50"><tr>
+      <th class="px-4 py-3 text-left font-semibold text-gray-600">Mã</th><th class="px-4 py-3 text-left font-semibold text-gray-600">Người mượn</th>
+      <th class="px-4 py-3 text-left font-semibold text-gray-600">Tài liệu</th><th class="px-4 py-3 text-left font-semibold text-gray-600">Ngày mượn</th>
+      <th class="px-4 py-3 text-left font-semibold text-gray-600">Hạn trả</th><th class="px-4 py-3 text-left font-semibold text-gray-600">Ngày trả</th>
+      <th class="px-4 py-3 text-left font-semibold text-gray-600">Trạng thái</th><th class="px-4 py-3 text-left font-semibold text-gray-600">Tiền phạt</th>
+      <th class="px-4 py-3 text-left font-semibold text-gray-600">Thao tác</th></tr></thead>
+    <tbody class="divide-y divide-gray-100">
+      {% for b in pagination.items %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 text-gray-500">#{{ b.id }}</td>
+          <td class="px-4 py-3"><p class="font-medium text-gray-900">{{ b.user.full_name }}</p><p class="text-xs text-gray-500">{{ b.user.email }}</p></td>
+          <td class="px-4 py-3 font-medium text-gray-900">{{ b.book.title }}{% if b.renew_count %}<span class="block text-xs text-gray-500">Đã gia hạn {{ b.renew_count }} lần</span>{% endif %}</td>
+          <td class="px-4 py-3 text-gray-600">{{ b.borrow_date|date }}</td>
+          <td class="px-4 py-3 {{ 'text-red-600 font-semibold' if b.is_overdue else 'text-gray-600' }}">{{ b.due_date|date }}</td>
+          <td class="px-4 py-3 text-gray-600">{{ b.return_date|date or '-' }}</td>
+          <td class="px-4 py-3">{{ status_badge(b) }}</td>
+          <td class="px-4 py-3 whitespace-nowrap">
+            {% if b.fine_amount %}<b class="{{ 'text-gray-500' if b.fine_paid else 'text-red-600' }}">{{ b.fine_amount|money }}</b>
+              <span class="block text-xs {{ 'text-emerald-600' if b.fine_paid else 'text-red-500' }}">{{ 'Đã thu' if b.fine_paid else 'Chưa thu' }}</span>
+            {% elif b.is_overdue %}<span class="text-xs text-red-500">Dự kiến {{ calculate_fine(b.due_date)|money }}</span>
+            {% else %}-{% endif %}
+          </td>
+          <td class="px-4 py-3"><div class="flex flex-wrap gap-2">
+            {% set btn = 'px-3 py-1.5 text-white text-xs font-semibold rounded-lg whitespace-nowrap ' %}
+            {% if b.status == 'pending' %}
+              {{ post_button(url_for('admin.borrowing_action', borrow_id=b.id, action='confirm_pickup'), 'Xác nhận đã lấy', btn ~ 'bg-green-600 hover:bg-green-700', 'Xác nhận người dùng đã đến lấy sách?') }}
+              {{ post_button(url_for('admin.borrowing_action', borrow_id=b.id, action='cancel'), 'Hủy phiếu', btn ~ 'bg-gray-500 hover:bg-gray-600', 'Hủy phiếu mượn này?') }}
+            {% elif b.status == 'borrowing' %}
+              {{ post_button(url_for('admin.borrowing_action', borrow_id=b.id, action='confirm_return'), 'Nhận trả sách', btn ~ 'bg-indigo-600 hover:bg-indigo-700', 'Xác nhận đã nhận lại sách?') }}
+            {% endif %}
+            {% if b.fine_amount and not b.fine_paid %}
+              {{ post_button(url_for('admin.borrowing_action', borrow_id=b.id, action='mark_paid'), 'Đã thu phạt', btn ~ 'bg-pink-600 hover:bg-pink-700', 'Xác nhận đã thu tiền phạt?') }}
+            {% endif %}
+          </div></td>
+        </tr>
+      {% else %}<tr><td colspan="9" class="px-4 py-12 text-center text-gray-400">Không có phiếu nào</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{{ paginate(pagination) }}
+{% endblock %}
