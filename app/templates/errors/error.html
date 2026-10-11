@@ -1,9 +1,14 @@
 {% extends 'base.html' %}
+{% from '_macros.html' import icon %}
 {% block title %}Lỗi {{ code }}{% endblock %}
 {% block content %}
-<div class="max-w-xl mx-auto px-4 py-24 text-center">
-  <p class="text-7xl font-extrabold text-indigo-600 mb-4">{{ code }}</p>
-  <p class="text-lg text-gray-700 mb-8">{{ message }}</p>
-  <a href="{{ url_for('main.index') }}" class="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700">Về trang chủ</a>
-</div>
+<section class="ink min-h-[70vh] flex items-center">
+  <span class="aurora-blob w-[32rem] h-[32rem] -left-32 -top-40 bg-violet-600"></span>
+  <span class="aurora-blob b2 w-[26rem] h-[26rem] right-0 bottom-[-10rem] bg-amber-500/50"></span>
+  <div class="relative max-w-xl mx-auto px-4 py-24 text-center fade-up">
+    <p class="font-display font-bold text-[8rem] md:text-[10rem] leading-none text-gold">{{ code }}</p>
+    <p class="text-lg text-indigo-100/80 mt-4 mb-10">{{ message }}</p>
+    <a href="{{ url_for('main.index') }}" class="btn btn-gold">{{ icon('arrow-left', 'w-4 h-4', 2) }} Về trang chủ</a>
+  </div>
+</section>
 {% endblock %}

@@ -1,17 +1,17 @@
-{% from '_macros.html' import flash_toasts %}
+{% from '_macros.html' import flash_toasts, icon %}
 {% set menu = [
-  ('admin.dashboard', {}, 'Dashboard', '📊'),
-  ('admin.books', {}, 'Tài liệu', '📚'),
-  ('admin.taxonomy', {'kind': 'categories'}, 'Danh mục', '🏷️'),
-  ('admin.taxonomy', {'kind': 'authors'}, 'Tác giả', '✍️'),
-  ('admin.taxonomy', {'kind': 'publishers'}, 'Nhà xuất bản', '🏢'),
-  ('admin.users', {}, 'Người dùng', '👥'),
-  ('admin.borrowing', {}, 'Mượn / trả', '🔄'),
-  ('admin.reservations', {}, 'Hàng chờ đặt trước', '⏳'),
-  ('admin.reviews', {}, 'Đánh giá', '⭐'),
-  ('admin.access_logs', {}, 'Lịch sử truy cập', '🕒'),
-  ('admin.statistics', {}, 'Thống kê & báo cáo', '📈'),
-  ('admin.settings', {}, 'Cài đặt', '⚙️'),
+  ('admin.dashboard', {}, 'Dashboard', 'grid'),
+  ('admin.books', {}, 'Tài liệu', 'library'),
+  ('admin.taxonomy', {'kind': 'categories'}, 'Danh mục', 'tag'),
+  ('admin.taxonomy', {'kind': 'authors'}, 'Tác giả', 'pen'),
+  ('admin.taxonomy', {'kind': 'publishers'}, 'Nhà xuất bản', 'building'),
+  ('admin.users', {}, 'Người dùng', 'users'),
+  ('admin.borrowing', {}, 'Mượn / trả', 'repeat'),
+  ('admin.reservations', {}, 'Hàng chờ đặt trước', 'hourglass'),
+  ('admin.reviews', {}, 'Đánh giá', 'star'),
+  ('admin.access_logs', {}, 'Lịch sử truy cập', 'history'),
+  ('admin.statistics', {}, 'Thống kê & báo cáo', 'chart'),
+  ('admin.settings', {}, 'Cài đặt', 'sliders'),
 ] %}
 <!DOCTYPE html>
 <html lang="vi">
@@ -20,48 +20,61 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}{% endblock %} - Quản trị thư viện</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
   <style>
-    * { font-family: 'Inter', system-ui, sans-serif; }
     @media print { aside, header, .no-print { display: none !important; } main { overflow: visible !important; } .h-screen { height: auto !important; } }
   </style>
   <script src="{{ url_for('static', filename='js/toast.js') }}"></script>
   {% block head %}{% endblock %}
 </head>
-<body class="bg-gray-50">
+<body>
 <div class="flex h-screen">
-  <aside id="sidebar" class="hidden lg:flex lg:flex-col w-64 bg-white border-r border-gray-200 fixed lg:static inset-y-0 left-0 z-40 shadow-xl lg:shadow-none">
-    <a href="{{ url_for('admin.dashboard') }}" class="p-6 border-b border-gray-200 font-bold text-lg bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Quản trị thư viện</a>
-    <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
-      {% for endpoint, args, label, icon in menu %}
+  <aside id="sidebar" class="admin-side hidden lg:flex lg:flex-col w-72 fixed lg:static inset-y-0 left-0 z-40 shadow-2xl lg:shadow-none text-white">
+    <a href="{{ url_for('admin.dashboard') }}" class="flex items-center gap-3 px-6 h-[4.5rem] border-b border-white/10">
+      <span class="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-violet-500 via-indigo-600 to-indigo-900 ring-1 ring-white/20 shadow-lg shadow-violet-600/40">{{ icon('library', 'w-5 h-5 text-amber-200', 2) }}</span>
+      <span class="leading-tight">
+        <span class="block font-display text-lg font-bold">Quản trị</span>
+        <span class="block text-[10px] uppercase tracking-[.22em] text-amber-200/70">Thư viện số</span>
+      </span>
+    </a>
+    <nav class="flex-1 px-4 py-5 space-y-1 overflow-y-auto">
+      <p class="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[.22em] text-white/35">Điều hướng</p>
+      {% for endpoint, args, label, ico in menu %}
         {% set active = request.endpoint == endpoint and (not args or request.view_args.get('kind') == args.get('kind')) %}
-        <a href="{{ url_for(endpoint, **args) }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm {{ 'bg-indigo-50 text-indigo-600 font-semibold' if active else 'text-gray-700 hover:bg-gray-50' }}">
-          <span aria-hidden="true">{{ icon }}</span>{{ label }}
+        <a href="{{ url_for(endpoint, **args) }}" class="side-link {{ 'is-active' if active }}">
+          {{ icon(ico, 'w-[18px] h-[18px] flex-shrink-0 ' ~ ('text-amber-200' if active else 'opacity-80')) }}{{ label }}
         </a>
       {% endfor %}
     </nav>
-    <a href="{{ url_for('main.index') }}" class="m-4 px-4 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-gray-50 border border-gray-200">← Về trang người dùng</a>
+    <a href="{{ url_for('main.index') }}" class="m-4 btn btn-glass btn-sm">{{ icon('arrow-left', 'w-4 h-4', 2) }} Về trang người dùng</a>
   </aside>
 
   <div class="flex-1 flex flex-col overflow-hidden">
-    <header class="bg-white border-b border-gray-200 h-16 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+    <header class="h-[4.5rem] px-4 sm:px-6 lg:px-8 flex items-center justify-between bg-white/60 backdrop-blur-xl border-b border-white/80 shadow-[0_8px_24px_-18px_rgba(28,24,84,.35)] relative z-30">
       <div class="flex items-center gap-3">
-        <button type="button" class="lg:hidden p-2 rounded-lg hover:bg-gray-100" aria-label="Mở menu"
-                onclick="document.getElementById('sidebar').classList.toggle('hidden')">☰</button>
-        <h1 class="text-xl font-bold text-gray-900">{{ self.title() }}</h1>
+        <button type="button" class="lg:hidden p-2 rounded-xl hover:bg-white" aria-label="Mở menu"
+                onclick="document.getElementById('sidebar').classList.toggle('hidden')">{{ icon('menu', 'w-5 h-5') }}</button>
+        <div>
+          <p class="text-[10px] uppercase tracking-[.22em] text-slate-400 hidden sm:block">Bảng điều khiển</p>
+          <h1 class="font-display text-xl md:text-2xl font-bold text-slate-900 leading-tight">{{ self.title() }}</h1>
+        </div>
       </div>
-      <div class="flex items-center gap-3">
-        <a href="{{ url_for('admin.borrowing', status='pending') }}" class="relative p-2 hover:bg-gray-100 rounded-lg" title="{{ pending_count }} phiếu chờ lấy sách">
-          🔔{% if pending_count %}<span class="absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-[1.1rem] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{{ pending_count }}</span>{% endif %}
+      <div class="flex items-center gap-2 sm:gap-3">
+        <a href="{{ url_for('admin.borrowing', status='pending') }}" class="relative p-2.5 rounded-xl text-slate-600 hover:bg-white hover:text-indigo-600 transition" title="{{ pending_count }} phiếu chờ lấy sách">
+          {{ icon('bell', 'w-5 h-5') }}
+          {% if pending_count %}<span class="absolute top-1 right-1 min-w-[1.1rem] h-[1.1rem] px-1 bg-gradient-to-br from-rose-400 to-rose-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white">{{ pending_count }}</span>{% endif %}
         </a>
-        <span class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full text-sm text-gray-700">
-          <span class="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 text-white text-xs font-bold flex items-center justify-center">{{ current_user.initials }}</span>{{ current_user.username }}
+        <span class="hidden sm:flex items-center gap-2 pl-1.5 pr-3 py-1.5 bg-white/80 ring-1 ring-slate-900/5 rounded-full text-sm text-slate-700">
+          <span class="w-7 h-7 rounded-full bg-gradient-to-br from-amber-300 to-amber-500 text-slate-900 text-xs font-bold flex items-center justify-center">{{ current_user.initials }}</span>{{ current_user.username }}
         </span>
         <form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button class="text-sm text-red-600 hover:underline">Đăng xuất</button></form>
+          <button class="p-2.5 rounded-xl text-rose-600 hover:bg-rose-50 transition flex items-center gap-1.5 text-sm font-medium" title="Đăng xuất">{{ icon('logout', 'w-4 h-4') }}<span class="hidden md:inline">Đăng xuất</span></button></form>
       </div>
     </header>
-    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">{% block content %}{% endblock %}</main>
+    <main class="admin-main flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">{% block content %}{% endblock %}</main>
   </div>
 </div>
 {{ flash_toasts() }}

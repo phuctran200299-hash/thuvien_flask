@@ -34,8 +34,38 @@ def index():
         'members': db.session.scalar(select(func.count(User.id)).where(User.role == 'member')),
         'reads': db.session.scalar(select(func.count(AccessLog.id)).where(AccessLog.action.in_(('read', 'download')))),
     }
-    categories = Category.query.order_by(Category.name).all()
-    return render_template('main/index.html', featured=featured, stats=stats, categories=categories)
+    stats['authors'] = db.session.scalar(select(func.count(Author.id)))
+    stats['copies'] = db.session.scalar(select(func.coalesce(func.sum(Book.quantity), 0)))
+
+    book_count = (select(func.count(Book.id)).where(Book.category_id == Category.id).correlate(Category).scalar_subquery())
+    categories = db.session.execute(select(Category, book_count).order_by(Category.name)).all()
+
+    # Slider tiêu điểm: tài liệu được xem nhiều nhất, kèm điểm đánh giá trung bình
+    spotlight = Book.query.order_by(Book.view_count.desc(), Book.id.desc()).limit(5).all()
+    ratings = {}
+    if spotlight:
+        rows = db.session.execute(
+            select(Review.book_id, func.avg(Review.rating * 1.0), func.count(Review.id))
+            .where(Review.book_id.in_([b.id for b in spotlight])).group_by(Review.book_id)).all()
+        ratings = {book_id: (round(float(avg), 1), count) for book_id, avg, count in rows}
+
+    popular = Book.query.order_by(Book.view_count.desc(), Book.id.desc()).limit(10).all()
+    digital = (Book.query.where(Book.files.any())
+               .order_by(Book.created_at.desc(), Book.id.desc()).limit(10).all())
+
+    author_books = (select(func.count(Book.id)).where(Book.author_id == Author.id).correlate(Author).scalar_subquery())
+    authors = db.session.execute(select(Author, author_books).order_by(author_books.desc(), Author.name).limit(8)).all()
+
+    reviews = (Review.query.where(Review.comment.isnot(None), Review.comment != '')
+               .order_by(Review.created_at.desc()).limit(8).all())
+
+    rules = {key: get_setting_int(key, default) for key, default in (
+        ('max_borrow_days', 14), ('max_books_per_user', 5), ('max_renewals', 2), ('renew_days', 7),
+        ('pending_expire_days', 3), ('fine_per_day', 5000))}
+
+    return render_template('main/index.html', featured=featured, stats=stats, categories=categories,
+                           spotlight=spotlight, ratings=ratings, popular=popular, digital=digital,
+                           authors=authors, reviews=reviews, rules=rules)
 
 
 @bp.route('/books')

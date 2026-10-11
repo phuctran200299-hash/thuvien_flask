@@ -7,3 +7,4 @@ app/static/uploads/*
 !app/static/uploads/.gitkeep
 storage/documents/*
 !storage/documents/.gitkeep
+~$*

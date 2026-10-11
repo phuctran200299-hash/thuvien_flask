@@ -1,62 +1,87 @@
 {% extends 'base.html' %}
+{% from '_macros.html' import icon %}
 {% block title %}{{ 'Đăng nhập' if tab == 'login' else 'Đăng ký' }}{% endblock %}
 {% block content %}
-{% set input = 'w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent' %}
-<div class="max-w-md mx-auto px-4 py-12">
-  <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
-    <div class="flex border-b border-gray-200">
-      <a href="{{ url_for('auth.login') }}" class="flex-1 py-4 text-center text-sm font-semibold {{ 'text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600' if tab == 'login' else 'text-gray-600 hover:bg-gray-50' }}">Đăng nhập</a>
-      <a href="{{ url_for('auth.register') }}" class="flex-1 py-4 text-center text-sm font-semibold {{ 'text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600' if tab == 'register' else 'text-gray-600 hover:bg-gray-50' }}">Đăng ký</a>
+<section class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
+  <div class="grid lg:grid-cols-2 rounded-[28px] overflow-hidden shadow-2xl shadow-indigo-900/20 ring-1 ring-white/60 fade-up">
+    <!-- Panel nghệ thuật -->
+    <div class="ink hidden lg:flex flex-col justify-between p-10 xl:p-12 min-h-[36rem]">
+      <span class="aurora-blob w-96 h-96 -left-24 -top-24 bg-violet-600"></span>
+      <span class="aurora-blob b2 w-80 h-80 -right-20 bottom-[-6rem] bg-amber-500/50"></span>
+      <span class="eyebrow eyebrow-dark self-start">{{ icon('sparkles', 'w-3.5 h-3.5') }}{{ get_setting('site_name') }}</span>
+      <div>
+        {{ icon('quote', 'w-10 h-10 text-amber-300/70 mb-5', 1.3) }}
+        <p class="font-display text-3xl xl:text-4xl leading-snug">Đầu tư vào <span class="text-gold italic">tri thức</span> luôn mang lại lợi nhuận cao nhất.</p>
+        <p class="mt-4 text-sm tracking-[.2em] uppercase text-amber-200/70">Benjamin Franklin</p>
+      </div>
+      <ul class="space-y-3 text-sm text-indigo-100/80">
+        {% for ico, text in [('book', 'Đọc tài liệu số trực tuyến 24/7'), ('repeat', 'Đặt mượn và gia hạn sách online'), ('bell', 'Nhắc hạn trả & thông báo sách đặt trước')] %}
+          <li class="flex items-center gap-3"><span class="w-8 h-8 rounded-lg glass-dark flex items-center justify-center">{{ icon(ico, 'w-4 h-4 text-amber-200') }}</span>{{ text }}</li>
+        {% endfor %}
+      </ul>
     </div>
-    <div class="p-8">
+
+    <!-- Form -->
+    <div class="bg-white/75 backdrop-blur-xl p-6 sm:p-10 xl:p-12">
+      <div class="seg w-full mb-8 !flex">
+        <a href="{{ url_for('auth.login') }}" class="seg-btn flex-1 text-center {{ 'is-active' if tab == 'login' }}">Đăng nhập</a>
+        <a href="{{ url_for('auth.register') }}" class="seg-btn flex-1 text-center {{ 'is-active' if tab == 'register' }}">Đăng ký</a>
+      </div>
       {% if tab == 'login' %}
-        <h1 class="text-2xl font-bold text-gray-900 mb-1">Chào mừng trở lại!</h1>
-        <p class="text-gray-600 text-sm mb-6">Đăng nhập để đọc tài liệu số và mượn sách</p>
-        <form method="post" class="space-y-4">
+        <h1 class="font-display text-3xl font-bold text-slate-900 mb-1">Chào mừng trở lại!</h1>
+        <p class="text-slate-500 text-sm mb-8">Đăng nhập để đọc tài liệu số và mượn sách</p>
+        <form method="post" class="space-y-5">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div>
-            <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Tên đăng nhập hoặc email</label>
-            <input id="username" name="username" required autocomplete="username" class="{{ input }}" value="{{ request.form.get('username', '') }}">
+            <label for="username" class="field-label">Tên đăng nhập hoặc email</label>
+            <div class="relative">
+              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">{{ icon('user', 'w-4 h-4') }}</span>
+              <input id="username" name="username" required autocomplete="username" class="field !pl-10 !py-3" value="{{ request.form.get('username', '') }}">
+            </div>
           </div>
           <div>
-            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Mật khẩu</label>
-            <input id="password" name="password" type="password" required autocomplete="current-password" class="{{ input }}">
+            <label for="password" class="field-label">Mật khẩu</label>
+            <div class="relative">
+              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">{{ icon('lock', 'w-4 h-4') }}</span>
+              <input id="password" name="password" type="password" required autocomplete="current-password" class="field !pl-10 !py-3">
+            </div>
           </div>
-          <button type="submit" class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg">Đăng nhập</button>
+          <button type="submit" class="btn btn-primary btn-block !py-3.5">Đăng nhập</button>
         </form>
+        <p class="text-sm text-slate-500 text-center mt-8">Chưa có tài khoản? <a href="{{ url_for('auth.register') }}" class="font-semibold text-indigo-600 hover:underline">Tạo tài khoản mới</a></p>
       {% else %}
-        <h1 class="text-2xl font-bold text-gray-900 mb-1">Tạo tài khoản</h1>
-        <p class="text-gray-600 text-sm mb-6">Đăng ký thành viên thư viện</p>
-        <form method="post" class="space-y-4" id="register-form">
+        <h1 class="font-display text-3xl font-bold text-slate-900 mb-1">Tạo tài khoản</h1>
+        <p class="text-slate-500 text-sm mb-8">Đăng ký thành viên thư viện</p>
+        <form method="post" class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="register-form">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <div>
-            <label for="full_name" class="block text-sm font-medium text-gray-700 mb-1">Họ và tên *</label>
-            <input id="full_name" name="full_name" required maxlength="100" class="{{ input }}" value="{{ request.form.get('full_name', '') }}">
+          <div class="sm:col-span-2">
+            <label for="full_name" class="field-label">Họ và tên *</label>
+            <input id="full_name" name="full_name" required maxlength="100" class="field" value="{{ request.form.get('full_name', '') }}">
           </div>
           <div>
-            <label for="reg_username" class="block text-sm font-medium text-gray-700 mb-1">Tên đăng nhập *</label>
-            <input id="reg_username" name="username" required pattern="[A-Za-z0-9_.]{3,50}" title="3-50 ký tự: chữ, số, _ và ." autocomplete="username" class="{{ input }}" value="{{ request.form.get('username', '') }}">
+            <label for="reg_username" class="field-label">Tên đăng nhập *</label>
+            <input id="reg_username" name="username" required pattern="[A-Za-z0-9_.]{3,50}" title="3-50 ký tự: chữ, số, _ và ." autocomplete="username" class="field" value="{{ request.form.get('username', '') }}">
           </div>
           <div>
-            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-            <input id="email" name="email" type="email" required class="{{ input }}" value="{{ request.form.get('email', '') }}">
+            <label for="phone" class="field-label">Số điện thoại</label>
+            <input id="phone" name="phone" pattern="[0-9]{10,11}" class="field" value="{{ request.form.get('phone', '') }}">
+          </div>
+          <div class="sm:col-span-2">
+            <label for="email" class="field-label">Email *</label>
+            <input id="email" name="email" type="email" required class="field" value="{{ request.form.get('email', '') }}">
           </div>
           <div>
-            <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
-            <input id="phone" name="phone" pattern="[0-9]{10,11}" class="{{ input }}" value="{{ request.form.get('phone', '') }}">
+            <label for="reg_password" class="field-label">Mật khẩu * (tối thiểu 6 ký tự)</label>
+            <input id="reg_password" name="password" type="password" required minlength="6" autocomplete="new-password" class="field">
           </div>
           <div>
-            <label for="reg_password" class="block text-sm font-medium text-gray-700 mb-1">Mật khẩu * (tối thiểu 6 ký tự)</label>
-            <input id="reg_password" name="password" type="password" required minlength="6" autocomplete="new-password" class="{{ input }}">
+            <label for="confirm_password" class="field-label">Xác nhận mật khẩu *</label>
+            <input id="confirm_password" name="confirm_password" type="password" required minlength="6" autocomplete="new-password" class="field">
           </div>
-          <div>
-            <label for="confirm_password" class="block text-sm font-medium text-gray-700 mb-1">Xác nhận mật khẩu *</label>
-            <input id="confirm_password" name="confirm_password" type="password" required minlength="6" autocomplete="new-password" class="{{ input }}">
-          </div>
-          <button type="submit" class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg">Đăng ký</button>
+          <button type="submit" class="sm:col-span-2 btn btn-primary btn-block !py-3.5 mt-2">Đăng ký</button>
         </form>
       {% endif %}
     </div>
   </div>
-</div>
+</section>
 {% endblock %}

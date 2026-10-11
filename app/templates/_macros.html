@@ -1,5 +1,54 @@
 {# Macro dùng chung #}
 
+{# Bộ icon nét mảnh (theo phong cách Lucide), vẽ bằng SVG để sắc nét ở mọi kích thước #}
+{% set ICONS = {
+  'search': '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  'book': '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+  'library': '<path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/>',
+  'bell': '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  'user': '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  'users': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  'file': '<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/>',
+  'download': '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
+  'heart': '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
+  'clock': '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  'pin': '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+  'phone': '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+  'mail': '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+  'lock': '<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  'arrow-right': '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+  'arrow-left': '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+  'sparkles': '<path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/>',
+  'eye': '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
+  'menu': '<path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/>',
+  'logout': '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
+  'layers': '<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
+  'grid': '<rect width="7" height="7" x="3" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="14" rx="1.5"/><rect width="7" height="7" x="3" y="14" rx="1.5"/>',
+  'tag': '<path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/>',
+  'pen': '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  'building': '<rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"/>',
+  'repeat': '<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
+  'hourglass': '<path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/>',
+  'star': '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>',
+  'history': '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
+  'chart': '<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+  'sliders': '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M2 14h4M10 8h4M18 16h4"/>',
+  'cap': '<path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/><path d="M22 10v6"/>',
+  'inbox': '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+  'quote': '<path d="M3 21c3 0 7-1 7-8V5c0-1.25-.76-2-2-2H4c-1.25 0-2 .75-2 1.97V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .01-1 1.03V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.76-2-2-2h-4c-1.25 0-2 .75-2 1.97V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/>',
+  'check': '<path d="M20 6 9 17l-5-5"/>',
+  'alert': '<circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>',
+  'calendar': '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  'globe': '<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
+  'shield': '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  'filter': '<path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/>',
+  'x': '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+} %}
+
+{% macro icon(name, cls='w-5 h-5', sw=1.8) -%}
+  <svg class="{{ cls }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="{{ sw }}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ ICONS.get(name, '')|safe }}</svg>
+{%- endmacro %}
+
 {% macro cover_url(image) -%}
   {%- if not image -%}
   {%- elif image.startswith('http://') or image.startswith('https://') -%}{{ image }}
@@ -9,42 +58,75 @@
 
 {% macro cover(book, cls='w-full h-full object-cover') -%}
   {% if book.image %}
-    <img src="{{ cover_url(book.image) }}" alt="{{ book.title }}" loading="lazy" class="{{ cls }}"
+    <img src="{{ cover_url(book.image) }}" alt="{{ book.title }}" loading="lazy" decoding="async" class="{{ cls }}"
          onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=400&h=600&fit=crop'">
   {% else %}
-    <div class="w-full h-full flex items-center justify-center text-5xl bg-gradient-to-br from-indigo-100 to-purple-100">📚</div>
+    <div class="w-full h-full flex flex-col items-center justify-center gap-2 p-3 text-center bg-gradient-to-br from-indigo-950 via-violet-900 to-indigo-800 text-amber-200">
+      {{ icon('book', 'w-9 h-9 opacity-80', 1.4) }}
+      <span class="font-display text-xs leading-snug text-white/80 line-clamp-2">{{ book.title }}</span>
+    </div>
   {% endif %}
 {%- endmacro %}
 
 {% macro book_card(book) -%}
-  <a href="{{ url_for('main.book_detail', book_id=book.id) }}" class="book-card bg-white rounded-xl overflow-hidden smooth-shadow border border-gray-100 group block">
-    <div class="relative aspect-[2/3] overflow-hidden bg-gray-100">
-      {{ cover(book, 'w-full h-full object-cover group-hover:scale-105 transition duration-300') }}
-      <div class="absolute top-2 right-2 px-2 py-1 {{ 'bg-emerald-500' if book.available > 0 else 'bg-red-500' }} text-white text-xs font-bold rounded">
+  <a href="{{ url_for('main.book_detail', book_id=book.id) }}" class="book-card group reveal">
+    <div class="cover-wrap">
+      {{ cover(book, 'w-full h-full object-cover') }}
+      <span class="cover-badge top-2.5 right-2.5">
+        <span class="dot {{ 'dot-green' if book.available > 0 else 'dot-red' }}"></span>
         {{ 'Còn %d'|format(book.available) if book.available > 0 else 'HẾT' }}
-      </div>
+      </span>
       {% if book.files %}
-        <div class="absolute top-2 left-2 px-2 py-1 bg-indigo-600 text-white text-xs font-bold rounded">📄 Bản số</div>
+        <span class="cover-badge top-2.5 left-2.5">{{ icon('file', 'w-3 h-3', 2.2) }} Bản số</span>
       {% endif %}
+      <span class="absolute bottom-2.5 left-3 right-3 z-[3] flex items-center gap-1 text-[11px] font-medium text-white/90">
+        {{ icon('eye', 'w-3.5 h-3.5') }} {{ book.view_count }}
+        {% if book.publish_year %}<span class="ml-auto opacity-80">{{ book.publish_year }}</span>{% endif %}
+      </span>
     </div>
-    <div class="p-3">
-      <h4 class="font-semibold text-sm mb-1 text-gray-900 line-clamp-2">{{ book.title }}</h4>
-      <p class="text-xs text-gray-600 mb-1">{{ book.author_name or 'Không rõ tác giả' }}</p>
-      <p class="text-xs text-gray-400">{% if book.publish_year %}{{ book.publish_year }} · {% endif %}{{ book.view_count }} lượt xem</p>
+    <div class="p-3.5">
+      <h4 class="font-semibold text-[0.9rem] leading-snug min-h-[2.5em] text-slate-900 line-clamp-2 group-hover:text-indigo-700 transition-colors">{{ book.title }}</h4>
+      <p class="text-xs text-slate-500 mt-1 truncate">{{ book.author_name or 'Không rõ tác giả' }}</p>
     </div>
   </a>
 {%- endmacro %}
 
+{# Banner đầu trang (nền mực đêm + cực quang). Dùng {% call page_hero(...) %}...{% endcall %} để thêm nội dung bên phải #}
+{% macro page_hero(title, subtitle=None, eyebrow=None, ico='sparkles') -%}
+  <section class="ink">
+    <span class="aurora-blob w-[28rem] h-[28rem] -left-24 -top-40 bg-violet-600"></span>
+    <span class="aurora-blob b2 w-[22rem] h-[22rem] right-0 -top-32 bg-teal-400/60"></span>
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 md:pt-16 md:pb-20 flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div class="fade-up max-w-2xl">
+        {% if eyebrow %}<span class="eyebrow eyebrow-dark mb-4">{{ icon(ico, 'w-3.5 h-3.5') }}{{ eyebrow }}</span>{% endif %}
+        <h1 class="font-display text-4xl md:text-5xl font-bold leading-tight">{{ title }}</h1>
+        {% if subtitle %}<p class="mt-3 text-base md:text-lg text-indigo-100/75">{{ subtitle }}</p>{% endif %}
+      </div>
+      {% if caller is defined %}<div class="fade-up d2">{{ caller() }}</div>{% endif %}
+    </div>
+    <span class="ink-edge"></span>
+  </section>
+{%- endmacro %}
+
+{% macro empty_state(ico, title, text=None) -%}
+  <div class="glass p-12 text-center">
+    <span class="mx-auto mb-5 w-16 h-16 rounded-2xl flex items-center justify-center text-white bg-gradient-to-br from-violet-500 to-indigo-700 shadow-lg shadow-indigo-500/30">{{ icon(ico, 'w-8 h-8', 1.6) }}</span>
+    <p class="font-display text-2xl font-bold text-slate-900 mb-2">{{ title }}</p>
+    {% if text %}<p class="text-slate-500 mb-5">{{ text }}</p>{% endif %}
+    {% if caller is defined %}{{ caller() }}{% endif %}
+  </div>
+{%- endmacro %}
+
 {% macro pagination(p) -%}
   {% if p.pages > 1 %}
-  <nav class="flex flex-wrap items-center justify-center gap-2 mt-8" aria-label="Phân trang">
-    {% if p.has_prev %}<a href="{{ page_url(p.prev_num) }}" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium">Trước</a>{% endif %}
+  <nav class="flex flex-wrap items-center justify-center gap-2 mt-10" aria-label="Phân trang">
+    {% if p.has_prev %}<a href="{{ page_url(p.prev_num) }}" class="btn btn-ghost btn-sm">{{ icon('arrow-left', 'w-4 h-4') }} Trước</a>{% endif %}
     {% for n in p.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
       {% if n %}
-        <a href="{{ page_url(n) }}" class="px-4 py-2 rounded-lg text-sm font-semibold {{ 'bg-indigo-600 text-white' if n == p.page else 'border border-gray-300 hover:bg-gray-50 text-gray-700' }}">{{ n }}</a>
-      {% else %}<span class="px-2 text-gray-400">…</span>{% endif %}
+        <a href="{{ page_url(n) }}" class="btn btn-sm min-w-[2.5rem] {{ 'btn-primary' if n == p.page else 'btn-ghost' }}" {% if n == p.page %}aria-current="page"{% endif %}>{{ n }}</a>
+      {% else %}<span class="px-2 text-slate-400">…</span>{% endif %}
     {% endfor %}
-    {% if p.has_next %}<a href="{{ page_url(p.next_num) }}" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium">Sau</a>{% endif %}
+    {% if p.has_next %}<a href="{{ page_url(p.next_num) }}" class="btn btn-ghost btn-sm">Sau {{ icon('arrow-right', 'w-4 h-4') }}</a>{% endif %}
   </nav>
   {% endif %}
 {%- endmacro %}
@@ -72,7 +154,7 @@
 {%- endmacro %}
 
 {% macro status_badge(b) -%}
-  {% set cls = {'pending': 'bg-cyan-50 text-cyan-700', 'returned': 'bg-emerald-50 text-emerald-700',
-                'cancelled': 'bg-gray-100 text-gray-600', 'borrowing': 'bg-orange-50 text-orange-700'}[b.status] %}
-  <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ 'bg-red-50 text-red-700' if b.is_overdue else cls }}">{{ b.status_label }}</span>
+  {% set cls = {'pending': 'bg-cyan-50 text-cyan-700 ring-cyan-200', 'returned': 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+                'cancelled': 'bg-slate-100 text-slate-600 ring-slate-200', 'borrowing': 'bg-amber-50 text-amber-700 ring-amber-200'}[b.status] %}
+  <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ring-1 ring-inset {{ 'bg-rose-50 text-rose-700 ring-rose-200' if b.is_overdue else cls }}">{{ b.status_label }}</span>
 {%- endmacro %}

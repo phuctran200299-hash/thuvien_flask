@@ -1,51 +1,61 @@
 {% extends 'base.html' %}
+{% from '_macros.html' import page_hero, icon %}
 {% block title %}Thông tin cá nhân{% endblock %}
 {% block content %}
-{% set input = 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent' %}
-<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
-  <div class="bg-white rounded-xl smooth-shadow p-6 text-center h-fit">
-    <span class="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 text-white text-2xl font-bold flex items-center justify-center mb-3">{{ current_user.initials }}</span>
-    <h1 class="text-xl font-bold text-gray-900">{{ current_user.full_name }}</h1>
-    <p class="text-sm text-gray-500">@{{ current_user.username }} · {{ 'Quản trị viên' if current_user.is_admin else 'Thành viên' }}</p>
-    <p class="text-xs text-gray-400 mt-1">Tham gia {{ current_user.created_at|date }}</p>
-    <dl class="grid grid-cols-2 gap-3 mt-6 text-left">
-      {% for label, value in [('Lượt mượn', stats.total), ('Đang mượn', stats.borrowing), ('Đã trả', stats.returned), ('Quá hạn', stats.overdue), ('Đọc / tải', stats.reads)] %}
-        <div class="bg-gray-50 rounded-lg p-3"><dt class="text-xs text-gray-500">{{ label }}</dt><dd class="text-xl font-bold text-gray-900">{{ value }}</dd></div>
-      {% endfor %}
-    </dl>
+{{ page_hero('Thông tin cá nhân', 'Quản lý hồ sơ và bảo mật tài khoản của bạn', 'Tài khoản', 'user') }}
+
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="glass overflow-hidden h-fit text-center">
+    <div class="ink h-24"><span class="aurora-blob w-60 h-60 -left-10 -top-24 bg-violet-600"></span></div>
+    <div class="px-6 pb-6 -mt-12 relative">
+      <span class="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-amber-300 to-amber-500 text-slate-900 text-3xl font-bold flex items-center justify-center ring-4 ring-white shadow-xl font-display">{{ current_user.initials }}</span>
+      <h1 class="font-display text-2xl font-bold text-slate-900 mt-3">{{ current_user.full_name }}</h1>
+      <p class="text-sm text-slate-500">@{{ current_user.username }} · {{ 'Quản trị viên' if current_user.is_admin else 'Thành viên' }}</p>
+      <p class="text-xs text-slate-400 mt-1">Tham gia {{ current_user.created_at|date }}</p>
+      <dl class="grid grid-cols-2 gap-3 mt-6 text-left">
+        {% for label, value, ico in [('Lượt mượn', stats.total, 'library'), ('Đang mượn', stats.borrowing, 'book'), ('Đã trả', stats.returned, 'check'), ('Quá hạn', stats.overdue, 'alert'), ('Đọc / tải', stats.reads, 'eye')] %}
+          <div class="rounded-2xl bg-white/70 ring-1 ring-slate-900/5 p-3 {{ 'col-span-2' if loop.last }}">
+            <dt class="text-xs text-slate-500 flex items-center gap-1.5">{{ icon(ico, 'w-3.5 h-3.5') }}{{ label }}</dt>
+            <dd class="font-display text-2xl font-bold text-slate-900">{{ value }}</dd>
+          </div>
+        {% endfor %}
+      </dl>
+    </div>
   </div>
 
   <div class="lg:col-span-2 space-y-6">
-    <form method="post" class="bg-white rounded-xl smooth-shadow p-6 space-y-4">
+    <form method="post" class="glass p-6 md:p-8 space-y-5">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="action" value="update_profile">
-      <h2 class="text-lg font-bold text-gray-900">Thông tin cá nhân</h2>
+      <h2 class="font-display text-xl font-bold text-slate-900 flex items-center gap-3">
+        <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-700 text-white flex items-center justify-center">{{ icon('user', 'w-4 h-4', 2) }}</span>Thông tin cá nhân</h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div><label for="full_name" class="block text-sm font-medium text-gray-700 mb-1">Họ và tên</label>
-          <input id="full_name" name="full_name" required maxlength="100" value="{{ current_user.full_name }}" class="{{ input }}"></div>
-        <div><label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-          <input id="email" name="email" type="email" required value="{{ current_user.email }}" class="{{ input }}"></div>
-        <div><label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
-          <input id="phone" name="phone" pattern="[0-9]{10,11}" value="{{ current_user.phone or '' }}" class="{{ input }}"></div>
-        <div class="md:col-span-2"><label for="address" class="block text-sm font-medium text-gray-700 mb-1">Địa chỉ</label>
-          <textarea id="address" name="address" rows="2" class="{{ input }}">{{ current_user.address or '' }}</textarea></div>
+        <div><label for="full_name" class="field-label">Họ và tên</label>
+          <input id="full_name" name="full_name" required maxlength="100" value="{{ current_user.full_name }}" class="field"></div>
+        <div><label for="email" class="field-label">Email</label>
+          <input id="email" name="email" type="email" required value="{{ current_user.email }}" class="field"></div>
+        <div><label for="phone" class="field-label">Số điện thoại</label>
+          <input id="phone" name="phone" pattern="[0-9]{10,11}" value="{{ current_user.phone or '' }}" class="field"></div>
+        <div class="md:col-span-2"><label for="address" class="field-label">Địa chỉ</label>
+          <textarea id="address" name="address" rows="2" class="field">{{ current_user.address or '' }}</textarea></div>
       </div>
-      <button class="px-6 py-2.5 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700">Lưu thay đổi</button>
+      <button class="btn btn-primary">Lưu thay đổi</button>
     </form>
 
-    <form method="post" class="bg-white rounded-xl smooth-shadow p-6 space-y-4">
+    <form method="post" class="glass p-6 md:p-8 space-y-5">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="action" value="change_password">
-      <h2 class="text-lg font-bold text-gray-900">Đổi mật khẩu</h2>
-      <div><label for="current_password" class="block text-sm font-medium text-gray-700 mb-1">Mật khẩu hiện tại</label>
-        <input id="current_password" name="current_password" type="password" required autocomplete="current-password" class="{{ input }}"></div>
+      <h2 class="font-display text-xl font-bold text-slate-900 flex items-center gap-3">
+        <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 text-amber-200 flex items-center justify-center">{{ icon('lock', 'w-4 h-4', 2) }}</span>Đổi mật khẩu</h2>
+      <div><label for="current_password" class="field-label">Mật khẩu hiện tại</label>
+        <input id="current_password" name="current_password" type="password" required autocomplete="current-password" class="field"></div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div><label for="new_password" class="block text-sm font-medium text-gray-700 mb-1">Mật khẩu mới</label>
-          <input id="new_password" name="new_password" type="password" required minlength="6" autocomplete="new-password" class="{{ input }}"></div>
-        <div><label for="confirm_password" class="block text-sm font-medium text-gray-700 mb-1">Xác nhận mật khẩu mới</label>
-          <input id="confirm_password" name="confirm_password" type="password" required minlength="6" autocomplete="new-password" class="{{ input }}"></div>
+        <div><label for="new_password" class="field-label">Mật khẩu mới</label>
+          <input id="new_password" name="new_password" type="password" required minlength="6" autocomplete="new-password" class="field"></div>
+        <div><label for="confirm_password" class="field-label">Xác nhận mật khẩu mới</label>
+          <input id="confirm_password" name="confirm_password" type="password" required minlength="6" autocomplete="new-password" class="field"></div>
       </div>
-      <button class="px-6 py-2.5 bg-gray-800 text-white rounded-lg font-semibold hover:bg-gray-900">Đổi mật khẩu</button>
+      <button class="btn bg-slate-900 text-white hover:bg-slate-800 shadow-lg shadow-slate-900/20">Đổi mật khẩu</button>
     </form>
   </div>
 </div>

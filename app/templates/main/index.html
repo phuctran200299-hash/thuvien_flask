@@ -1,46 +1,395 @@
 {% extends 'base.html' %}
-{% from '_macros.html' import book_card %}
+{% from '_macros.html' import book_card, cover, cover_url, icon %}
 {% block title %}Trang chủ{% endblock %}
 {% block content %}
-<section class="bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 text-white">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-    <h1 class="text-4xl md:text-5xl font-extrabold mb-4">{{ get_setting('site_name') }}</h1>
-    <p class="text-lg text-indigo-100 max-w-2xl mx-auto mb-10">Tra cứu, đọc trực tuyến và mượn tài liệu phục vụ học tập, giảng dạy và nghiên cứu khoa học</p>
-    <form action="{{ url_for('main.books') }}" method="get" class="max-w-2xl mx-auto flex flex-col sm:flex-row gap-2 bg-white/95 rounded-2xl p-2 shadow-xl">
-      <label for="hero-search" class="sr-only">Tìm tài liệu</label>
-      <input id="hero-search" name="search" placeholder="Tên tài liệu, tác giả, từ khóa..." class="flex-1 px-5 py-3 rounded-xl text-gray-900 focus:outline-none">
-      <button class="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl">Tìm kiếm</button>
-    </form>
+{% macro num(v) %}{{ '{:,}'.format(v or 0).replace(',', '.') }}{% endmacro %}
+{% macro section_head(eyebrow, title, ico, text=None, dark=False) %}
+  <div>
+    <span class="eyebrow {{ 'eyebrow-dark' if dark else 'eyebrow-light' }}">{{ icon(ico, 'w-3.5 h-3.5') }}{{ eyebrow }}</span>
+    <h2 class="{{ 'font-display text-white text-[clamp(1.6rem,2.6vw,2.25rem)] font-bold leading-tight' if dark else 'section-title' }} mt-3">{{ title }}</h2>
+    <div class="divider-gold mt-4"></div>
+    {% if text %}<p class="mt-4 max-w-xl {{ 'text-indigo-100/70' if dark else 'text-slate-500' }}">{{ text }}</p>{% endif %}
   </div>
+{% endmacro %}
+{% macro rail_arrows(dark=False) %}
+  <div class="flex gap-2 flex-shrink-0">
+    <button type="button" data-prev class="rail-arrow {{ 'on-dark' if dark }}" aria-label="Xem các mục trước">{{ icon('arrow-left', 'w-4 h-4', 2) }}</button>
+    <button type="button" data-next class="rail-arrow {{ 'on-dark' if dark }}" aria-label="Xem các mục tiếp theo">{{ icon('arrow-right', 'w-4 h-4', 2) }}</button>
+  </div>
+{% endmacro %}
+{% set palettes = ['from-violet-500 to-indigo-700', 'from-teal-400 to-emerald-600', 'from-amber-300 to-orange-500',
+                   'from-rose-400 to-fuchsia-600', 'from-sky-400 to-blue-700', 'from-lime-400 to-green-600'] %}
+
+<!-- ============ HERO ============ -->
+<section class="ink">
+  <span class="aurora-blob w-[36rem] h-[36rem] -left-40 -top-48 bg-violet-600"></span>
+  <span class="aurora-blob b2 w-[28rem] h-[28rem] right-[-8rem] top-10 bg-teal-400/50"></span>
+  <span class="aurora-blob b3 w-[30rem] h-[30rem] left-1/3 bottom-[-18rem] bg-amber-500/40"></span>
+
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-36 md:pt-24 md:pb-44 grid lg:grid-cols-12 gap-12 items-center">
+    <div class="lg:col-span-7">
+      <span class="eyebrow eyebrow-dark fade-up">{{ icon('cap', 'w-4 h-4') }}{{ get_setting('site_name') }}</span>
+      <h1 class="fade-up d1 font-display font-bold mt-6 text-[2.6rem] leading-[1.08] sm:text-6xl lg:text-[4.2rem]">
+        Mở cánh cửa<br><em class="text-gold not-italic sm:italic">tri thức</em> không giới hạn
+      </h1>
+      <p class="fade-up d2 mt-6 text-lg text-indigo-100/80 max-w-xl leading-relaxed">
+        Tra cứu, đọc trực tuyến và mượn tài liệu phục vụ học tập, giảng dạy và nghiên cứu khoa học — mọi lúc, mọi nơi.
+      </p>
+
+      <form action="{{ url_for('main.books') }}" method="get" class="fade-up d3 mt-9 max-w-xl glass-dark ring-gradient rounded-2xl p-2 flex flex-col sm:flex-row gap-2">
+        <label for="hero-search" class="sr-only">Tìm tài liệu</label>
+        <div class="flex-1 flex items-center gap-3 px-4">
+          {{ icon('search', 'w-5 h-5 text-indigo-200/70 flex-shrink-0') }}
+          <input id="hero-search" name="search" placeholder="Tên tài liệu, tác giả, từ khóa..."
+                 class="w-full bg-transparent py-3 text-white placeholder:text-indigo-200/50 focus:outline-none">
+        </div>
+        <button class="btn btn-gold !py-3.5 !px-7">Tìm kiếm</button>
+      </form>
+
+      {% if categories %}
+      <div class="fade-up d4 mt-6 flex flex-wrap items-center gap-2 text-sm">
+        <span class="text-indigo-200/60 mr-1">Gợi ý:</span>
+        {% for c, n in categories[:4] %}
+          <a href="{{ url_for('main.books', category=c.id) }}" class="chip chip-dark">{{ c.name }}</a>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Chồng sách 3D -->
+    <div class="hidden lg:block lg:col-span-5 relative h-[30rem]" aria-hidden="true">
+      <div class="absolute inset-10 rounded-full bg-gradient-to-tr from-violet-600/40 via-indigo-500/20 to-amber-400/30 blur-3xl"></div>
+      {% set stack = featured[:3] %}
+      {% if stack|length >= 1 %}
+        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+          <div class="float-y"><div class="book-3d w-52 aspect-[2/3]">{{ cover(stack[0]) }}</div></div>
+        </div>
+      {% endif %}
+      {% if stack|length >= 2 %}
+        <div class="absolute left-[4%] top-[22%] z-10 -rotate-[10deg]">
+          <div class="float-y d1"><div class="book-3d w-40 aspect-[2/3] opacity-90">{{ cover(stack[1]) }}</div></div>
+        </div>
+      {% endif %}
+      {% if stack|length >= 3 %}
+        <div class="absolute right-[2%] top-[14%] z-10 rotate-[9deg]">
+          <div class="float-y d2"><div class="book-3d w-40 aspect-[2/3] opacity-90">{{ cover(stack[2]) }}</div></div>
+        </div>
+      {% endif %}
+      <div class="absolute z-30 left-0 bottom-6 glass-dark rounded-2xl px-4 py-3 flex items-center gap-3 float-y d2">
+        <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center">{{ icon('file', 'w-5 h-5 text-white') }}</span>
+        <span><span class="block text-lg font-bold leading-none">{{ num(stats.digital) }}</span><span class="text-xs text-indigo-100/70">tệp tài liệu số</span></span>
+      </div>
+      <div class="absolute z-30 right-0 bottom-20 glass-dark rounded-2xl px-4 py-3 flex items-center gap-3 float-y">
+        <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-300 to-amber-600 flex items-center justify-center">{{ icon('star', 'w-5 h-5 text-white') }}</span>
+        <span><span class="block text-sm font-semibold leading-tight">Đọc mọi lúc</span><span class="text-xs text-indigo-100/70">trên mọi thiết bị</span></span>
+      </div>
+    </div>
+  </div>
+  <span class="ink-edge"></span>
 </section>
 
-<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8">
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-    {% for label, value in [('Đầu tài liệu', stats.books), ('Tệp tài liệu số', stats.digital), ('Thành viên', stats.members), ('Lượt đọc / tải', stats.reads)] %}
-      <div class="bg-white rounded-xl shadow-md p-5 text-center">
-        <p class="text-3xl font-bold text-gray-900">{{ '{:,}'.format(value).replace(',', '.') }}</p>
-        <p class="text-sm text-gray-600 mt-1">{{ label }}</p>
+<!-- ============ THỐNG KÊ ============ -->
+<section class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20">
+  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+    {% for label, value, ico, grad in [
+        ('Đầu tài liệu', stats.books, 'library', 'from-violet-500 to-indigo-700'),
+        ('Bản sách giấy', stats.copies, 'book', 'from-sky-400 to-blue-700'),
+        ('Tệp tài liệu số', stats.digital, 'file', 'from-teal-400 to-emerald-600'),
+        ('Tác giả', stats.authors, 'pen', 'from-lime-400 to-green-600'),
+        ('Thành viên', stats.members, 'users', 'from-rose-400 to-fuchsia-600'),
+        ('Lượt đọc / tải', stats.reads, 'eye', 'from-amber-300 to-orange-500')] %}
+      <div class="glass glass-hover !bg-white/[.92] p-5 fade-up d{{ loop.index if loop.index < 5 else 4 }}">
+        <span class="w-10 h-10 rounded-xl bg-gradient-to-br {{ grad }} text-white flex items-center justify-center shadow-lg mb-3">{{ icon(ico, 'w-5 h-5', 2) }}</span>
+        <p class="font-display text-3xl font-bold text-slate-900">{{ num(value) }}</p>
+        <p class="text-sm text-slate-500 mt-0.5">{{ label }}</p>
       </div>
     {% endfor %}
   </div>
 </section>
 
-<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-14">
-  <h2 class="text-2xl font-bold text-gray-900 mb-4">Danh mục</h2>
-  <div class="flex flex-wrap gap-2">
-    {% for c in categories %}
-      <a href="{{ url_for('main.books', category=c.id) }}" class="px-4 py-2 bg-white border border-gray-200 rounded-full text-sm text-gray-700 hover:border-indigo-400 hover:text-indigo-600">{{ c.name }}</a>
+<!-- ============ SLIDER TIÊU ĐIỂM ============ -->
+{% if spotlight %}
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-20">
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 reveal">
+    {{ section_head('Tiêu điểm', 'Được quan tâm nhiều nhất', 'sparkles', 'Những tài liệu đang được bạn đọc tìm xem nhiều nhất trong thư viện.') }}
+  </div>
+
+  <div data-slider data-autoplay="6500" class="ink rounded-[28px] reveal" aria-roledescription="carousel" aria-label="Tài liệu tiêu điểm">
+    <div data-track class="spot-track no-scrollbar">
+      {% for b in spotlight %}
+        {% set r = ratings.get(b.id) %}
+        <article class="relative isolate overflow-hidden" role="group" aria-roledescription="slide" aria-label="{{ loop.index }} / {{ spotlight|length }}">
+          {% if b.image %}
+            <img src="{{ cover_url(b.image) }}" alt="" aria-hidden="true" loading="lazy" class="absolute inset-0 -z-10 w-full h-full object-cover scale-125 blur-3xl opacity-40 saturate-150">
+          {% endif %}
+          <div class="absolute inset-0 -z-10 bg-gradient-to-r from-[#0a0f24] via-[#0a0f24]/85 to-[#0a0f24]/40"></div>
+          <div class="grid md:grid-cols-12 gap-8 md:gap-10 items-center px-6 pt-10 pb-24 md:px-14 md:pt-14 md:pb-24 min-h-[30rem]">
+            <div class="md:col-span-7 lg:col-span-8 order-2 md:order-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="eyebrow eyebrow-dark">Top {{ loop.index }}</span>
+                {% if b.category %}<span class="chip chip-dark !text-xs !py-1">{{ b.category.name }}</span>{% endif %}
+              </div>
+              <h3 class="font-display font-bold text-3xl md:text-5xl leading-tight mt-5">{{ b.title }}</h3>
+              <p class="text-lg text-indigo-100/80 mt-3 flex items-center gap-2">{{ icon('pen', 'w-4 h-4 text-amber-200') }}{{ b.author_name or 'Không rõ tác giả' }}</p>
+              {% if b.description %}<p class="mt-4 text-indigo-100/70 leading-relaxed max-w-2xl line-clamp-3">{{ b.description }}</p>{% endif %}
+              <div class="flex flex-wrap gap-2 mt-5 text-sm">
+                {% if r %}<span class="chip chip-dark"><span class="text-amber-300">★</span> {{ r[0] }} ({{ r[1] }})</span>{% endif %}
+                <span class="chip chip-dark">{{ icon('eye', 'w-4 h-4') }} {{ b.view_count }} lượt xem</span>
+                {% if b.publish_year %}<span class="chip chip-dark">{{ icon('calendar', 'w-4 h-4') }} {{ b.publish_year }}</span>{% endif %}
+                <span class="chip chip-dark"><span class="dot {{ 'dot-green' if b.available > 0 else 'dot-red' }}"></span>{{ 'Còn %d bản giấy'|format(b.available) if b.available > 0 else 'Hết bản giấy' }}</span>
+              </div>
+              <div class="flex flex-wrap gap-3 mt-7">
+                <a href="{{ url_for('main.book_detail', book_id=b.id) }}" class="btn btn-gold">Xem chi tiết {{ icon('arrow-right', 'w-4 h-4', 2) }}</a>
+                {% if b.files %}<a href="{{ url_for('main.book_detail', book_id=b.id) }}#digital" class="btn btn-glass">{{ icon('book', 'w-4 h-4', 2) }} Đọc bản số</a>{% endif %}
+              </div>
+            </div>
+            <div class="md:col-span-5 lg:col-span-4 order-1 md:order-2 flex justify-center">
+              <div class="relative">
+                <div class="absolute -inset-8 rounded-[2rem] bg-gradient-to-tr from-violet-600/50 to-amber-400/40 blur-2xl"></div>
+                <div class="book-3d relative w-40 md:w-56 aspect-[2/3] md:rotate-[4deg]">{{ cover(b) }}</div>
+              </div>
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+
+    <div class="absolute left-6 right-6 md:left-14 md:right-14 bottom-7 flex items-center gap-5">
+      <div class="flex items-center gap-2">
+        {% for b in spotlight %}<button type="button" data-dot class="spot-dot" aria-label="Chuyển tới tài liệu {{ loop.index }}"></button>{% endfor %}
+      </div>
+      <div class="spot-progress flex-1"><span></span></div>
+      <div class="flex gap-2">
+        <button type="button" data-prev class="spot-arrow" aria-label="Tài liệu trước">{{ icon('arrow-left', 'w-4 h-4', 2) }}</button>
+        <button type="button" data-next class="spot-arrow" aria-label="Tài liệu tiếp theo">{{ icon('arrow-right', 'w-4 h-4', 2) }}</button>
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- ============ DANH MỤC ============ -->
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-24">
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 reveal">
+    {{ section_head('Chủ đề', 'Danh mục', 'layers') }}
+    <p class="text-slate-500 max-w-md">Khám phá kho tài liệu được sắp xếp theo từng lĩnh vực chuyên môn.</p>
+  </div>
+  {% set cat_icons = ['book', 'chart', 'sparkles', 'globe', 'cap', 'pen'] %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for c, n in categories %}
+      <a href="{{ url_for('main.books', category=c.id) }}" class="glass glass-hover reveal group flex items-center gap-4 p-4 pr-5">
+        <span class="w-12 h-12 rounded-2xl bg-gradient-to-br {{ palettes[loop.index0 % 6] }} text-white flex items-center justify-center shadow-lg flex-shrink-0 group-hover:scale-110 group-hover:rotate-[-6deg] transition-transform duration-300">
+          {{ icon(cat_icons[loop.index0 % 6], 'w-6 h-6', 1.8) }}
+        </span>
+        <span class="flex-1 min-w-0">
+          <span class="block font-semibold text-slate-800 truncate">{{ c.name }}</span>
+          <span class="block text-xs text-slate-500 mt-0.5">{{ n }} tài liệu</span>
+        </span>
+        <span class="w-9 h-9 rounded-full flex items-center justify-center text-slate-400 bg-white/60 group-hover:bg-indigo-600 group-hover:text-white transition">{{ icon('arrow-right', 'w-4 h-4', 2) }}</span>
+      </a>
     {% endfor %}
   </div>
 </section>
 
-<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-14">
-  <div class="flex items-center justify-between mb-6">
-    <h2 class="text-2xl font-bold text-gray-900">Tài liệu mới</h2>
-    <a href="{{ url_for('main.books') }}" class="text-indigo-600 font-semibold text-sm hover:underline">Xem tất cả →</a>
+<!-- ============ XEM NHIỀU NHẤT (carousel) ============ -->
+{% if popular %}
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-24" data-rail>
+  <div class="flex items-end justify-between gap-4 mb-4 reveal">
+    {{ section_head('Bảng xếp hạng', 'Xem nhiều nhất', 'chart') }}
+    {{ rail_arrows() }}
   </div>
-  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+  <div data-track class="rail no-scrollbar" aria-label="Tài liệu xem nhiều nhất">
+    {% for b in popular %}
+      <div class="flex items-end w-[15.5rem] sm:w-[17rem]">
+        <span class="rank-num select-none -mr-3 relative z-0" aria-hidden="true">{{ loop.index }}</span>
+        <div class="relative z-10 w-[11.5rem] sm:w-[12.5rem]">{{ book_card(b) }}</div>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<!-- ============ TÀI LIỆU MỚI ============ -->
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-20">
+  <div class="flex items-end justify-between gap-4 mb-8 reveal">
+    {{ section_head('Mới cập nhật', 'Tài liệu mới', 'sparkles') }}
+    <a href="{{ url_for('main.books') }}" class="btn btn-ghost btn-sm group">Xem tất cả <span class="group-hover:translate-x-1 transition-transform">{{ icon('arrow-right', 'w-4 h-4', 2) }}</span></a>
+  </div>
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-5">
     {% for book in featured %}{{ book_card(book) }}{% endfor %}
   </div>
 </section>
+
+<!-- ============ ĐỌC NGAY: TÀI LIỆU SỐ (carousel nền tối) ============ -->
+{% if digital %}
+<section class="mt-24 ink" data-rail>
+  <span class="aurora-blob w-[30rem] h-[30rem] -left-32 -top-40 bg-violet-600"></span>
+  <span class="aurora-blob b2 w-[26rem] h-[26rem] right-0 bottom-[-12rem] bg-teal-400/40"></span>
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-6 reveal">
+      {{ section_head('Thư viện số', 'Đọc ngay, không cần chờ', 'file', 'Tài liệu có bản số được đọc trực tuyến ngay trên trình duyệt; nhiều tài liệu cho phép tải về để đọc ngoại tuyến.', True) }}
+      <div class="flex items-center gap-3">
+        <a href="{{ url_for('main.books', digital=1) }}" class="btn btn-glass btn-sm">Tất cả tài liệu số</a>
+        {{ rail_arrows(True) }}
+      </div>
+    </div>
+    <div data-track class="rail no-scrollbar" aria-label="Tài liệu số">
+      {% for b in digital %}
+        <div class="w-[11.5rem] sm:w-[13rem]">{{ book_card(b) }}</div>
+      {% endfor %}
+    </div>
+  </div>
+  <span class="ink-edge"></span>
+</section>
+{% endif %}
+
+<!-- ============ QUY TRÌNH MƯỢN SÁCH ============ -->
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-24">
+  <div class="text-center flex flex-col items-center mb-12 reveal">
+    <span class="eyebrow eyebrow-light">{{ icon('repeat', 'w-3.5 h-3.5') }}Hướng dẫn</span>
+    <h2 class="section-title mt-3">Mượn sách chỉ với 4 bước</h2>
+    <div class="divider-gold mt-4"></div>
+  </div>
+  <div class="steps relative grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    <span class="step-line hidden lg:block" aria-hidden="true"></span>
+    {% for ico, grad, title, text in [
+        ('search', 'from-violet-500 to-indigo-700', 'Tra cứu tài liệu', 'Tìm theo tên, tác giả, danh mục hoặc từ khóa và xem tình trạng còn sách.'),
+        ('book', 'from-teal-400 to-emerald-600', 'Đặt mượn online', 'Bấm "Đặt mượn sách" ở trang chi tiết. Hết sách thì đăng ký hàng chờ.'),
+        ('building', 'from-amber-300 to-orange-500', 'Nhận sách tại quầy', 'Đến thư viện trong %d ngày, mang theo thẻ sinh viên hoặc CCCD.'|format(rules.pending_expire_days)),
+        ('history', 'from-rose-400 to-fuchsia-600', 'Trả hoặc gia hạn', 'Mượn tối đa %d ngày, gia hạn %d lần (mỗi lần +%d ngày) ngay trên web.'|format(rules.max_borrow_days, rules.max_renewals, rules.renew_days))] %}
+      <div class="relative glass glass-hover p-6 text-center flex flex-col items-center reveal">
+        <span class="step-badge bg-gradient-to-br {{ grad }}">{{ icon(ico, 'w-7 h-7', 1.8) }}</span>
+        <p class="font-display text-xl font-bold text-slate-900 mt-5">{{ title }}</p>
+        <p class="text-sm text-slate-500 mt-2 leading-relaxed">{{ text }}</p>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- ============ TÁC GIẢ TIÊU BIỂU ============ -->
+{% if authors %}
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-24">
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 reveal">
+    {{ section_head('Tác giả', 'Tác giả tiêu biểu', 'pen') }}
+    <p class="text-slate-500 max-w-md">Những cây bút có nhiều tài liệu nhất trong kho sách của thư viện.</p>
+  </div>
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+    {% for a, n in authors %}
+      {% set parts = a.name.split() %}
+      <a href="{{ url_for('main.books', author=a.id) }}" class="glass glass-hover reveal group p-5 flex items-center gap-4">
+        <span class="w-14 h-14 rounded-full bg-gradient-to-br {{ palettes[loop.index0 % 6] }} text-white font-display text-xl font-bold flex items-center justify-center flex-shrink-0 ring-4 ring-white shadow-lg">
+          {{ (parts[0][:1] ~ (parts[-1][:1] if parts|length > 1 else '')) | upper }}</span>
+        <span class="min-w-0">
+          <span class="block font-semibold text-slate-900 truncate group-hover:text-indigo-700">{{ a.name }}</span>
+          <span class="block text-xs text-slate-500 mt-0.5">{{ n }} tài liệu</span>
+        </span>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<!-- ============ ĐỘC GIẢ NÓI GÌ ============ -->
+{% if reviews %}
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-24" data-rail>
+  <div class="flex items-end justify-between gap-4 mb-4 reveal">
+    {{ section_head('Cảm nhận', 'Độc giả nói gì', 'quote') }}
+    {{ rail_arrows() }}
+  </div>
+  <div data-track class="rail no-scrollbar" aria-label="Đánh giá của độc giả">
+    {% for r in reviews %}
+      <figure class="glass w-[19rem] sm:w-[22rem] p-6 flex flex-col">
+        {{ icon('quote', 'w-7 h-7 text-violet-300', 1.4) }}
+        <span class="text-amber-400 tracking-wider mt-3" aria-label="{{ r.rating }} sao">{{ '★' * r.rating }}<span class="text-slate-300">{{ '★' * (5 - r.rating) }}</span></span>
+        <blockquote class="mt-2 text-slate-700 leading-relaxed line-clamp-4 flex-1">{{ r.comment }}</blockquote>
+        <figcaption class="flex items-center gap-3 mt-5 pt-4 border-t border-slate-900/5">
+          <span class="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-indigo-700 text-white text-sm font-semibold flex items-center justify-center flex-shrink-0">{{ r.user.initials }}</span>
+          <span class="min-w-0">
+            <span class="block font-semibold text-sm text-slate-900 truncate">{{ r.user.full_name }}</span>
+            <a href="{{ url_for('main.book_detail', book_id=r.book_id) }}" class="block text-xs text-indigo-600 truncate hover:underline">{{ r.book.title }}</a>
+          </span>
+        </figcaption>
+      </figure>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<!-- ============ GIÁ TRỊ ============ -->
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-24">
+  <div class="ink rounded-[28px] px-6 py-12 md:px-12 md:py-16 reveal">
+    <span class="aurora-blob w-96 h-96 -right-24 -top-32 bg-violet-600"></span>
+    <span class="aurora-blob b2 w-80 h-80 -left-20 -bottom-40 bg-amber-500/50"></span>
+    <div class="relative grid lg:grid-cols-12 gap-10 items-center">
+      <div class="lg:col-span-5">
+        <span class="eyebrow eyebrow-dark">{{ icon('shield', 'w-3.5 h-3.5') }}Vì sao chọn chúng tôi</span>
+        <h2 class="font-display text-3xl md:text-4xl font-bold mt-4 leading-tight">Một thư viện, <span class="text-gold italic">vô vàn</span> cách học</h2>
+        <p class="mt-4 text-indigo-100/75 leading-relaxed">Kết hợp kho sách giấy truyền thống với tài liệu số hiện đại, giúp bạn tiếp cận tri thức nhanh và thuận tiện nhất.</p>
+        {% if not current_user.is_authenticated %}
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="{{ url_for('auth.register') }}" class="btn btn-gold">Đăng ký thành viên {{ icon('arrow-right', 'w-4 h-4', 2) }}</a>
+            <a href="{{ url_for('main.books') }}" class="btn btn-glass">Khám phá ngay</a>
+          </div>
+        {% else %}
+          <a href="{{ url_for('user.my_books') }}" class="btn btn-gold mt-7">Sách của tôi {{ icon('arrow-right', 'w-4 h-4', 2) }}</a>
+        {% endif %}
+      </div>
+      <div class="lg:col-span-7 grid sm:grid-cols-2 gap-4">
+        {% for ico, title, text, grad in [
+            ('book', 'Đọc trực tuyến', 'Xem tài liệu số ngay trên trình duyệt, không cần cài đặt.', 'from-violet-500 to-indigo-700'),
+            ('repeat', 'Mượn sách giấy', 'Đặt mượn online, nhận sách tại quầy, gia hạn chỉ một chạm.', 'from-teal-400 to-emerald-600'),
+            ('hourglass', 'Đặt trước thông minh', 'Sách hết? Xếp hàng chờ, hệ thống tự giữ sách cho bạn.', 'from-amber-300 to-orange-500'),
+            ('bell', 'Nhắc hạn tự động', 'Thông báo trước hạn trả để bạn không bao giờ bị phạt.', 'from-rose-400 to-fuchsia-600')] %}
+          <div class="glass-dark rounded-2xl p-5 hover:bg-white/10 transition">
+            <span class="w-11 h-11 rounded-xl bg-gradient-to-br {{ grad }} flex items-center justify-center mb-4 shadow-lg">{{ icon(ico, 'w-5 h-5 text-white', 2) }}</span>
+            <p class="font-semibold text-lg">{{ title }}</p>
+            <p class="text-sm text-indigo-100/70 mt-1 leading-relaxed">{{ text }}</p>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CÂU HỎI THƯỜNG GẶP + LIÊN HỆ ============ -->
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-24 grid lg:grid-cols-12 gap-8">
+  <div class="lg:col-span-7 reveal">
+    {{ section_head('Hỏi đáp', 'Câu hỏi thường gặp', 'alert') }}
+    <div class="mt-8 space-y-2">
+      {% for q, a in [
+          ('Ai có thể đọc tài liệu số?', 'Tài liệu được đánh dấu "Công khai" thì ai cũng đọc được, kể cả khi chưa đăng nhập. Tài liệu dành cho thành viên yêu cầu đăng nhập; một số tài liệu chỉ cho đọc trực tuyến, không cho tải về.'),
+          ('Tôi được mượn bao nhiêu cuốn và trong bao lâu?', 'Mỗi người được mượn tối đa %d cuốn cùng lúc (tính cả phiếu đang chờ lấy). Thời gian mượn là %d ngày kể từ ngày nhận sách.'|format(rules.max_books_per_user, rules.max_borrow_days)),
+          ('Gia hạn sách như thế nào?', 'Vào "Sách của tôi" và bấm "Gia hạn". Mỗi phiếu được gia hạn tối đa %d lần, mỗi lần thêm %d ngày, với điều kiện phiếu chưa quá hạn.'|format(rules.max_renewals, rules.renew_days)),
+          ('Trả sách trễ có bị phạt không?', 'Có. Mỗi ngày trả trễ bị phạt %s đồng/cuốn. Khi còn khoản phạt chưa thanh toán, bạn chưa thể đặt mượn thêm.'|format(num(rules.fine_per_day))),
+          ('Sách đã hết thì làm sao?', 'Bấm "Đăng ký chờ sách" để vào hàng chờ. Khi có người trả, hệ thống tự giữ sách cho người đứng đầu hàng chờ và gửi thông báo để bạn đến nhận trong %d ngày.'|format(rules.pending_expire_days))] %}
+        <details class="faq glass !bg-white/60" {{ 'open' if loop.first }}>
+          <summary><span class="w-8 h-8 rounded-lg bg-gradient-to-br {{ palettes[loop.index0 % 6] }} text-white text-sm font-bold flex items-center justify-center flex-shrink-0">{{ loop.index }}</span>{{ q }}<span class="faq-icon">{{ icon('x', 'w-3.5 h-3.5 rotate-45', 2.4) }}</span></summary>
+          <div>{{ a }}</div>
+        </details>
+      {% endfor %}
+    </div>
+  </div>
+
+  <aside class="lg:col-span-5 reveal">
+    <div class="ink rounded-[28px] p-8 h-full flex flex-col">
+      <span class="aurora-blob w-80 h-80 -right-20 -top-24 bg-violet-600"></span>
+      <span class="eyebrow eyebrow-dark self-start">{{ icon('pin', 'w-3.5 h-3.5') }}Ghé thăm thư viện</span>
+      <h3 class="font-display text-3xl font-bold mt-4">Không gian đọc <span class="text-gold italic">yên tĩnh</span></h3>
+      <p class="text-indigo-100/70 mt-3 leading-relaxed">Mở cửa cho sinh viên, giảng viên và cán bộ nhà trường. Hãy mang theo thẻ khi đến mượn – trả sách.</p>
+      <ul class="mt-7 space-y-4 text-sm">
+        {% for ico, label, value in [('clock', 'Giờ mở cửa', get_setting('opening_hours')), ('pin', 'Địa chỉ', get_setting('contact_address')),
+                                     ('phone', 'Điện thoại', get_setting('contact_phone')), ('mail', 'Email', get_setting('contact_email'))] %}
+          <li class="flex gap-4">
+            <span class="w-10 h-10 rounded-xl glass-dark flex items-center justify-center flex-shrink-0">{{ icon(ico, 'w-4 h-4 text-amber-200') }}</span>
+            <span><span class="block text-xs uppercase tracking-[.16em] text-amber-200/70">{{ label }}</span><span class="block text-white/90 mt-0.5">{{ value }}</span></span>
+          </li>
+        {% endfor %}
+      </ul>
+      <a href="{{ url_for('main.books') }}" class="btn btn-gold mt-auto self-start !mt-8">{{ icon('search', 'w-4 h-4', 2) }} Bắt đầu tra cứu</a>
+    </div>
+  </aside>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/home.js') }}" defer></script>
 {% endblock %}

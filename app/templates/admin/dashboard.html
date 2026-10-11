@@ -1,49 +1,76 @@
 {% extends 'admin/base.html' %}
-{% from '_macros.html' import status_badge %}
+{% from '_macros.html' import status_badge, icon %}
 {% block title %}Dashboard{% endblock %}
 {% block content %}
+<section class="ink rounded-[24px] px-6 py-8 md:px-10 md:py-10 mb-6 fade-up">
+  <span class="aurora-blob w-96 h-96 -left-24 -top-40 bg-violet-600"></span>
+  <span class="aurora-blob b2 w-80 h-80 right-0 -bottom-40 bg-amber-500/50"></span>
+  <div class="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div>
+      <span class="eyebrow eyebrow-dark">{{ icon('sparkles', 'w-3.5 h-3.5') }}Xin chào, {{ current_user.full_name }}</span>
+      <h2 class="font-display text-3xl md:text-4xl font-bold mt-4">Tổng quan <span class="text-gold italic">thư viện</span></h2>
+      <p class="text-indigo-100/70 mt-2">Theo dõi tài liệu, người dùng và hoạt động mượn trả trong một nơi.</p>
+    </div>
+    <div class="flex flex-wrap gap-3">
+      <a href="{{ url_for('admin.book_form') }}" class="btn btn-gold">+ Thêm tài liệu</a>
+      <a href="{{ url_for('admin.borrowing', status='pending') }}" class="btn btn-glass">{{ icon('repeat', 'w-4 h-4', 2) }} Phiếu chờ ({{ stats.pending }})</a>
+    </div>
+  </div>
+</section>
+
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-  {% for label, value, link in [
-      ('Đầu tài liệu', stats.books, url_for('admin.books')),
-      ('Tệp tài liệu số', stats.files, url_for('admin.books')),
-      ('Thành viên', stats.members, url_for('admin.users')),
-      ('Lượt đọc/tải tháng này', stats.reads_month, url_for('admin.access_logs')),
-      ('Đang mượn', stats.borrowing, url_for('admin.borrowing', status='borrowing')),
-      ('Quá hạn', stats.overdue, url_for('admin.borrowing', status='overdue')),
-      ('Chờ lấy sách', stats.pending, url_for('admin.borrowing', status='pending')),
+  {% for label, value, link, ico, grad in [
+      ('Đầu tài liệu', stats.books, url_for('admin.books'), 'library', 'from-violet-500 to-indigo-700'),
+      ('Tệp tài liệu số', stats.files, url_for('admin.books'), 'file', 'from-teal-400 to-emerald-600'),
+      ('Thành viên', stats.members, url_for('admin.users'), 'users', 'from-rose-400 to-fuchsia-600'),
+      ('Lượt đọc/tải tháng này', stats.reads_month, url_for('admin.access_logs'), 'eye', 'from-sky-400 to-blue-700'),
+      ('Đang mượn', stats.borrowing, url_for('admin.borrowing', status='borrowing'), 'book', 'from-amber-300 to-orange-500'),
+      ('Quá hạn', stats.overdue, url_for('admin.borrowing', status='overdue'), 'alert', 'from-rose-500 to-red-700'),
+      ('Chờ lấy sách', stats.pending, url_for('admin.borrowing', status='pending'), 'hourglass', 'from-cyan-400 to-sky-600'),
   ] %}
-    <a href="{{ link }}" class="bg-white rounded-xl shadow-sm hover:shadow-md transition p-5 border border-gray-100 block">
-      <p class="text-sm text-gray-600">{{ label }}</p>
-      <p class="text-3xl font-bold text-gray-900 mt-1">{{ value }}</p>
+    <a href="{{ link }}" class="glass glass-hover p-5 block group fade-up d{{ loop.index if loop.index < 5 else 4 }}">
+      <div class="flex items-start justify-between">
+        <span class="w-11 h-11 rounded-xl bg-gradient-to-br {{ grad }} text-white flex items-center justify-center shadow-lg">{{ icon(ico, 'w-5 h-5', 2) }}</span>
+        <span class="text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition">{{ icon('arrow-right', 'w-4 h-4', 2) }}</span>
+      </div>
+      <p class="font-display text-3xl font-bold text-slate-900 mt-4">{{ value }}</p>
+      <p class="text-sm text-slate-500 mt-0.5">{{ label }}</p>
     </a>
   {% endfor %}
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-  <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100">
-    <div class="p-5 border-b border-gray-100 flex justify-between items-center">
-      <h2 class="font-bold text-gray-900">Tài liệu mới thêm</h2>
-      <a href="{{ url_for('admin.book_form') }}" class="text-sm text-indigo-600 font-medium">+ Thêm tài liệu</a>
+  <div class="lg:col-span-2 glass overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-900/5 flex justify-between items-center">
+      <h2 class="font-display text-lg font-bold text-slate-900">Tài liệu mới thêm</h2>
+      <a href="{{ url_for('admin.book_form') }}" class="btn btn-primary btn-sm">+ Thêm tài liệu</a>
     </div>
-    <table class="w-full text-sm">
-      <tbody class="divide-y divide-gray-100">
+    <div class="overflow-x-auto">
+    <table class="table-glass">
+      <tbody>
         {% for b in recent_books %}
-          <tr><td class="px-5 py-3 font-medium text-gray-900">{{ b.title }}</td>
-              <td class="px-5 py-3 text-gray-600">{{ b.author_name or 'N/A' }}</td>
-              <td class="px-5 py-3 text-gray-600">{{ b.files|length }} tệp số</td>
-              <td class="px-5 py-3"><a href="{{ url_for('admin.book_form', book_id=b.id) }}" class="text-indigo-600 font-medium">Sửa</a></td></tr>
+          <tr><td class="font-semibold text-slate-900">{{ b.title }}</td>
+              <td class="text-slate-500">{{ b.author_name or 'N/A' }}</td>
+              <td><span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full bg-indigo-50 text-indigo-700">{{ icon('file', 'w-3 h-3', 2) }}{{ b.files|length }} tệp số</span></td>
+              <td class="text-right"><a href="{{ url_for('admin.book_form', book_id=b.id) }}" class="text-indigo-600 font-semibold hover:underline">Sửa</a></td></tr>
         {% endfor %}
       </tbody>
     </table>
+    </div>
   </div>
-  <div class="bg-white rounded-xl shadow-sm border border-gray-100">
-    <h2 class="p-5 border-b border-gray-100 font-bold text-gray-900">Hoạt động mượn trả gần đây</h2>
+  <div class="glass overflow-hidden">
+    <h2 class="px-5 py-4 border-b border-slate-900/5 font-display text-lg font-bold text-slate-900">Hoạt động mượn trả gần đây</h2>
     <ul class="p-5 space-y-4">
       {% for b in recent_borrows %}
-        <li><p class="text-sm font-medium text-gray-900">{{ b.user.full_name }}</p>
-            <p class="text-sm text-gray-600 truncate">{{ b.book.title }}</p>
-            <p class="mt-1 flex items-center gap-2">{{ status_badge(b) }}<span class="text-xs text-gray-500">{{ b.updated_at|datetime }}</span></p></li>
-      {% else %}<li class="text-sm text-gray-400">Chưa có hoạt động</li>{% endfor %}
+        <li class="flex gap-3">
+          <span class="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-indigo-700 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">{{ b.user.initials }}</span>
+          <div class="min-w-0">
+            <p class="text-sm font-semibold text-slate-900">{{ b.user.full_name }}</p>
+            <p class="text-sm text-slate-500 truncate">{{ b.book.title }}</p>
+            <p class="mt-1 flex items-center gap-2">{{ status_badge(b) }}<span class="text-xs text-slate-400">{{ b.updated_at|datetime }}</span></p>
+          </div>
+        </li>
+      {% else %}<li class="text-sm text-slate-400">Chưa có hoạt động</li>{% endfor %}
     </ul>
   </div>
 </div>
