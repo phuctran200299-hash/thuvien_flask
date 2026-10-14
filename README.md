@@ -327,7 +327,29 @@ Thư mục:       C:\duong-dan\thuvien_flask
 
 > Nâng cấp CSDL đang chạy lên phiên bản có đặt trước/thông báo/yêu thích: `flask db upgrade`.
 
-## 8. Hạn chế và hướng phát triển
+## 8. Trợ lý AI và nút liên hệ
+
+Góc dưới bên phải mọi trang người dùng có 3 nút nổi: **Zalo**, **Gọi điện** (số `HOTLINE`, mặc định `0918705099`)
+và **Trợ lý AI** hỏi đáp.
+
+Trợ lý dùng Claude API (`app/chatbot.py`, model `claude-opus-5-5`). Claude không trả lời theo trí nhớ mà gọi công cụ
+để lấy dữ liệu thật: `search_books` tra cứu kho tài liệu, `get_my_account` xem sách đang mượn, hạn trả, tiền phạt của
+người đang đăng nhập. Quy định mượn trả và thông tin liên hệ được lấy từ trang *Cài đặt*. Trợ lý chỉ hướng dẫn,
+không tự đặt mượn hay gia hạn thay người dùng.
+
+Cấu hình trong `.env`:
+
+| Biến | Ý nghĩa |
+|---|---|
+| `ANTHROPIC_API_KEY` | API key lấy tại https://platform.claude.com (bắt buộc để trợ lý trả lời) |
+| `CHATBOT_ENABLED` | `0` để tắt trợ lý (nút Zalo/Gọi điện vẫn hiện) |
+| `CHATBOT_RATE_LIMIT`, `CHATBOT_RATE_WINDOW` | Số câu hỏi tối đa mỗi phiên trong khoảng thời gian (mặc định 15 câu / 300 giây) |
+| `HOTLINE` | Số điện thoại cho nút Gọi điện và Zalo; để trống để ẩn hai nút |
+
+Bật sẵn cơ chế dự phòng của Claude API (`fallbacks: "default"`): nếu bộ lọc an toàn từ chối nhầm một câu hỏi hợp lệ,
+API tự chạy lại trên model dự phòng. Test trong `tests/test_chatbot.py` dùng client giả nên không tốn phí API.
+
+## 9. Hạn chế và hướng phát triển
 - Thông báo mới hiển thị trong hệ thống, chưa gửi qua email (cần cấu hình SMTP)
 - Chưa có chức năng quên mật khẩu tự phục vụ (cần email); hiện quản trị viên đặt lại mật khẩu cho người dùng
 - Chưa tìm kiếm toàn văn trong nội dung tệp và chưa có gợi ý tài liệu thông minh

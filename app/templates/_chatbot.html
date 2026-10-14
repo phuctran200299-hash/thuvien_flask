@@ -1,0 +1,69 @@
+{# Widget trợ lý AI góc dưới bên phải #}
+{% from '_macros.html' import icon %}
+<style>#chatbot [hidden] { display: none !important; }</style>
+<div id="chatbot" class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end gap-3"
+     data-endpoint="{{ url_for('chat.chat') }}" data-csrf="{{ csrf_token() }}"
+     data-user="{{ current_user.full_name if current_user.is_authenticated else '' }}">
+  {% if config.CHATBOT_ENABLED %}
+  <section id="chatbot-panel" role="dialog" aria-label="Trợ lý thư viện" hidden
+           class="w-[calc(100vw-2rem)] sm:w-96 h-[min(36rem,calc(100vh-7rem))] flex flex-col rounded-3xl overflow-hidden bg-white shadow-2xl shadow-indigo-900/30 ring-1 ring-slate-900/10">
+    <header class="relative flex items-center gap-3 px-4 py-3.5 text-white bg-gradient-to-br from-[#121a3d] via-[#1c2550] to-[#3b2a8f]">
+      <span class="w-10 h-10 rounded-2xl flex items-center justify-center bg-gradient-to-br from-violet-500 to-indigo-700 ring-1 ring-white/20 shadow-lg shadow-violet-600/40">
+        {{ icon('sparkles', 'w-5 h-5 text-amber-200', 2) }}
+      </span>
+      <div class="min-w-0 flex-1">
+        <p class="font-semibold leading-tight">Trợ lý thư viện</p>
+        <p class="text-xs text-indigo-100/70 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Hỏi đáp tài liệu, quy định mượn trả</p>
+      </div>
+      <button type="button" id="chatbot-reset" class="p-2 rounded-xl text-white/70 hover:text-white hover:bg-white/10 text-xs" title="Cuộc trò chuyện mới">Làm mới</button>
+      <button type="button" id="chatbot-close" class="p-2 rounded-xl text-white/70 hover:text-white hover:bg-white/10" aria-label="Đóng trợ lý">{{ icon('x', 'w-5 h-5', 2) }}</button>
+    </header>
+
+    <div id="chatbot-messages" class="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-[#f5f4fb]" aria-live="polite"></div>
+
+    <div id="chatbot-suggestions" class="flex flex-wrap gap-2 px-4 pb-2 bg-[#f5f4fb]">
+      {% for q in ['Gợi ý sách về lập trình', 'Quy định mượn và gia hạn sách?', 'Tài liệu số đọc thế nào?'] + (['Sách tôi đang mượn hạn khi nào?'] if current_user.is_authenticated else []) %}
+        <button type="button" class="chatbot-suggest px-3 py-1.5 text-xs font-medium rounded-full bg-white text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-50">{{ q }}</button>
+      {% endfor %}
+    </div>
+
+    <form id="chatbot-form" class="flex items-end gap-2 p-3 border-t border-slate-200 bg-white">
+      <label for="chatbot-input" class="sr-only">Nhập câu hỏi</label>
+      <textarea id="chatbot-input" rows="1" maxlength="1000" placeholder="Nhập câu hỏi..." required
+                class="flex-1 resize-none max-h-32 px-4 py-2.5 rounded-2xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"></textarea>
+      <button type="submit" id="chatbot-send" aria-label="Gửi"
+              class="w-11 h-11 flex-shrink-0 rounded-2xl flex items-center justify-center text-white bg-gradient-to-br from-violet-500 to-indigo-700 shadow-md shadow-indigo-500/30 hover:brightness-110 disabled:opacity-50">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+      </button>
+    </form>
+    <p class="px-4 pb-2 text-[10px] text-slate-400 bg-white">Câu trả lời do AI tạo, có thể chưa chính xác. Quy định chính thức theo thư viện.</p>
+  </section>
+  {% endif %}
+
+  {% set hotline = config.HOTLINE %}
+  {% if hotline %}
+  <div id="contact-buttons" class="flex flex-col items-end gap-3">
+    <a href="https://zalo.me/{{ hotline }}" target="_blank" rel="noopener noreferrer" aria-label="Nhắn Zalo {{ hotline }}"
+       class="group flex items-center gap-2">
+      <span class="hidden sm:block opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition px-3 py-1.5 rounded-full bg-white text-xs font-semibold text-slate-700 shadow-lg ring-1 ring-slate-900/5 whitespace-nowrap">Chat Zalo: {{ hotline }}</span>
+      <span class="w-14 h-14 rounded-full flex items-center justify-center bg-[#0068ff] ring-2 ring-white shadow-xl shadow-blue-600/40 hover:scale-105 transition text-white font-extrabold text-[13px] tracking-tight">Zalo</span>
+    </a>
+    <a href="tel:{{ hotline }}" aria-label="Gọi điện {{ hotline }}" class="group flex items-center gap-2">
+      <span class="hidden sm:block opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition px-3 py-1.5 rounded-full bg-white text-xs font-semibold text-slate-700 shadow-lg ring-1 ring-slate-900/5 whitespace-nowrap">Gọi ngay: {{ hotline }}</span>
+      <span class="relative w-14 h-14 rounded-full flex items-center justify-center text-white bg-gradient-to-br from-emerald-400 to-emerald-600 ring-2 ring-white shadow-xl shadow-emerald-600/40 hover:scale-105 transition">
+        <span class="absolute inset-0 rounded-full bg-emerald-400/60 animate-ping motion-reduce:hidden" aria-hidden="true"></span>
+        <svg class="relative w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+      </span>
+    </a>
+  </div>
+  {% endif %}
+
+  {% if config.CHATBOT_ENABLED %}
+  <button type="button" id="chatbot-toggle" aria-controls="chatbot-panel" aria-expanded="false" aria-label="Mở trợ lý thư viện"
+          class="group relative w-14 h-14 rounded-full flex items-center justify-center text-white bg-gradient-to-br from-violet-500 via-indigo-600 to-indigo-900 ring-2 ring-white shadow-xl shadow-indigo-700/40 hover:scale-105 transition">
+    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M8 12h.01M12 12h.01M16 12h.01"/></svg>
+    <span class="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-amber-400 ring-2 ring-white"></span>
+  </button>
+  {% endif %}
+</div>
+{% if config.CHATBOT_ENABLED %}<script src="{{ url_for('static', filename='js/chatbot.js') }}" defer></script>{% endif %}

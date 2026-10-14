@@ -35,6 +35,15 @@ class Config:
     MAX_IMAGE_SIZE = 5 * 1024 * 1024
     MAX_DOCUMENT_SIZE = 50 * 1024 * 1024
 
+    # Trợ lý AI (Claude API): cần ANTHROPIC_API_KEY trong .env
+    CHATBOT_ENABLED = os.getenv('CHATBOT_ENABLED', '1') not in ('0', 'false', 'False', '')
+    CHATBOT_MODEL = os.getenv('CHATBOT_MODEL', 'claude-opus-5-5')
+    CHATBOT_RATE_LIMIT = int(os.getenv('CHATBOT_RATE_LIMIT', '15'))      # số câu hỏi tối đa
+    CHATBOT_RATE_WINDOW = int(os.getenv('CHATBOT_RATE_WINDOW', '300'))   # trong bao nhiêu giây
+
+    # Số điện thoại cho 2 nút liên hệ nổi (Gọi điện, Zalo) ở góc dưới bên phải; để trống để ẩn
+    HOTLINE = os.getenv('HOTLINE', '0918705099')
+
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     WTF_CSRF_TIME_LIMIT = None
