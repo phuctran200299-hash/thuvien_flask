@@ -68,3 +68,14 @@ def test_csrf_bat_buoc_voi_post(tmp_path):
 def test_trang_thong_ke_va_dashboard(admin_client):
     for path in ('/admin/', '/admin/statistics', '/admin/access-logs', '/admin/borrowing?status=overdue'):
         assert admin_client.get(path).status_code == 200
+
+
+def test_phan_trang_nhieu_trang(admin_client, db, book_by_title):
+    """Macro phân trang phải chạy được khi dữ liệu vượt quá 1 trang."""
+    from app.models import AccessLog
+    book = book_by_title('Marketing')
+    db.session.add_all([AccessLog(book_id=book.id, action='view') for _ in range(35)])
+    db.session.commit()
+    res = admin_client.get('/admin/access-logs')
+    assert res.status_code == 200
+    assert 'page=2' in res.get_data(as_text=True)

@@ -40,6 +40,8 @@ def create_app(config_class=Config):
         money=utils.format_money, date=utils.format_date, datetime=utils.format_datetime,
         filesize=utils.format_filesize, initials=utils.initials,
     )
+    # Đăng ký global (không qua context processor) để macro import từ _macros.html dùng được
+    app.jinja_env.globals['page_url'] = utils.page_url
 
     @app.context_processor
     def inject_globals():
@@ -50,7 +52,7 @@ def create_app(config_class=Config):
         def unread_count():
             return unread_notifications(current_user.id) if current_user.is_authenticated else 0
 
-        return {'get_setting': get_setting, 'page_url': utils.page_url, 'unread_count': unread_count}
+        return {'get_setting': get_setting, 'unread_count': unread_count}
 
     @app.errorhandler(CSRFError)
     def csrf_error(e):
