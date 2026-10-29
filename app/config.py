@@ -37,7 +37,8 @@ class Config:
 
     # Trợ lý AI (Claude API): cần ANTHROPIC_API_KEY trong .env
     CHATBOT_ENABLED = os.getenv('CHATBOT_ENABLED', '1') not in ('0', 'false', 'False', '')
-    CHATBOT_MODEL = os.getenv('CHATBOT_MODEL', 'claude-opus-5-5')
+    # Mặc định Haiku: rẻ, nhanh, đủ cho hỏi đáp thư viện. Muốn trả lời tốt hơn: CHATBOT_MODEL=claude-opus-5-5
+    CHATBOT_MODEL = os.getenv('CHATBOT_MODEL', 'claude-haiku-5-5')
     CHATBOT_RATE_LIMIT = int(os.getenv('CHATBOT_RATE_LIMIT', '15'))      # số câu hỏi tối đa
     CHATBOT_RATE_WINDOW = int(os.getenv('CHATBOT_RATE_WINDOW', '300'))   # trong bao nhiêu giây
 

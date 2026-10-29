@@ -6,9 +6,12 @@ Claude trả lời dựa trên dữ liệu thật của thư viện qua các cô
 
 Lịch sử hội thoại do trình duyệt giữ và gửi lên dạng văn bản; trong một lượt hỏi, các phản hồi
 có gọi công cụ được gửi lại nguyên vẹn (kể cả thinking block) cho tới khi Claude trả lời xong.
+
+Chưa cấu hình API key hoặc Claude API gặp sự cố thì trả lời tự động từ CSDL (chatbot_offline.py).
 """
 import json
 import logging
+import os
 
 import anthropic
 from flask import current_app
@@ -20,6 +23,8 @@ from .models import Author, Book, Borrowing, Category, Publisher, Reservation
 log = logging.getLogger(__name__)
 
 MAX_TOOL_ROUNDS = 5
+# Các model hỗ trợ cơ chế dự phòng phía máy chủ (fallbacks: "default")
+FALLBACK_MODELS = {'claude-opus-5-5', 'claude-opus-5', 'claude-fable-5-1', 'claude-sonnet-5-5'}
 MAX_HISTORY = 12          # số tin nhắn gần nhất gửi kèm
 MAX_MESSAGE_CHARS = 1000
 
@@ -197,37 +202,58 @@ def clean_history(raw):
     return messages
 
 
+def _ai_configured():
+    """Có thông tin xác thực Claude API (hoặc client đã được cài sẵn, ví dụ khi kiểm thử)."""
+    return ('anthropic_client' in current_app.extensions
+            or bool(os.getenv('ANTHROPIC_API_KEY') or os.getenv('ANTHROPIC_AUTH_TOKEN')))
+
+
+def _offline(question, user, reason=None):
+    from .chatbot_offline import answer
+    if reason:
+        log.warning('Chatbot: chuyển sang trả lời tự động (%s)', reason)
+    return answer(question, user)
+
+
 def ask(history, user=None):
-    """Gửi hội thoại tới Claude, xử lý gọi công cụ, trả về câu trả lời dạng văn bản."""
+    """Trả lời câu hỏi: dùng Claude khi có API key, nếu không (hoặc API lỗi) thì trả lời tự động từ CSDL."""
     messages = clean_history(history)
+    question = messages[-1]['content']
+    if not _ai_configured():
+        return _offline(question, user)
+    return _ask_claude(messages, question, user)
+
+
+def _ask_claude(messages, question, user):
+    """Gửi hội thoại tới Claude, xử lý gọi công cụ, trả về câu trả lời dạng văn bản."""
     client = _client()
     system = _system_prompt()
     model = current_app.config['CHATBOT_MODEL']
 
+    params = dict(model=model, max_tokens=16000, system=system, tools=TOOLS,
+                  output_config={'effort': 'low'})  # hỏi đáp ngắn: ưu tiên nhanh, tiết kiệm
+    if model in FALLBACK_MODELS:
+        # Nếu bị bộ lọc an toàn từ chối nhầm, API tự chạy lại trên model dự phòng (Haiku không hỗ trợ)
+        params.update(betas=['server-side-fallback-2026-07-01'], fallbacks='default')
+
     for _ in range(MAX_TOOL_ROUNDS):
         try:
-            response = client.beta.messages.create(
-                model=model,
-                max_tokens=16000,
-                system=system,
-                tools=TOOLS,
-                messages=messages,
-                output_config={'effort': 'low'},  # hỏi đáp ngắn: ưu tiên nhanh, tiết kiệm
-                # Nếu bị bộ lọc an toàn từ chối nhầm, API tự chạy lại trên model dự phòng
-                betas=['server-side-fallback-2026-07-01'],
-                fallbacks='default',
-            )
+            if 'fallbacks' in params:
+                response = client.beta.messages.create(messages=messages, **params)
+            else:
+                response = client.messages.create(messages=messages, **params)
+        # Claude API gặp sự cố: không báo lỗi cho người dùng mà trả lời tự động từ CSDL
         except anthropic.AuthenticationError:
-            log.error('Chatbot: ANTHROPIC_API_KEY không hợp lệ hoặc chưa cấu hình')
-            raise ChatError('Trợ lý AI chưa được cấu hình. Vui lòng liên hệ quản trị viên.')
+            log.error('Chatbot: ANTHROPIC_API_KEY không hợp lệ')
+            return _offline(question, user, 'API key không hợp lệ')
         except anthropic.RateLimitError:
-            raise ChatError('Trợ lý đang quá tải, vui lòng thử lại sau ít phút.')
+            return _offline(question, user, 'vượt giới hạn hoặc hết hạn mức API')
         except anthropic.APIConnectionError:
-            raise ChatError('Không kết nối được tới dịch vụ AI, vui lòng thử lại.')
+            return _offline(question, user, 'không kết nối được Claude API')
         except anthropic.APIStatusError as e:
             log.error('Chatbot API lỗi %s: %s (request-id %s)', e.status_code, e.message,
                       e.response.headers.get('request-id'))
-            raise ChatError('Trợ lý gặp sự cố, vui lòng thử lại sau.')
+            return _offline(question, user, f'lỗi API {e.status_code}')
 
         if response.stop_reason == 'refusal':
             return 'Xin lỗi, mình không thể hỗ trợ yêu cầu này. Bạn có thể hỏi về tài liệu, quy định mượn trả hoặc cách dùng website nhé.'

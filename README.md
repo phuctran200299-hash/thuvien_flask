@@ -53,6 +53,9 @@ flask run            :: chạy web tại http://127.0.0.1:5000
 ```
 
 > Nạp lại dữ liệu mẫu từ đầu: `flask seed --force`
+>
+> Bổ sung dữ liệu demo phong phú (khoảng 40 tài liệu, 10 sinh viên, lịch sử mượn trả 12 tháng, đánh giá, lượt truy
+> cập 60 ngày): `flask seed-demo`. Chạy bằng Docker: `docker compose exec web flask seed-demo`.
 
 ### Cách khác: chạy bằng Docker (không cần cài SQL Server)
 
@@ -332,22 +335,27 @@ Thư mục:       C:\duong-dan\thuvien_flask
 Góc dưới bên phải mọi trang người dùng có 3 nút nổi: **Zalo**, **Gọi điện** (số `HOTLINE`, mặc định `0918705099`)
 và **Trợ lý AI** hỏi đáp.
 
-Trợ lý dùng Claude API (`app/chatbot.py`, model `claude-opus-5-5`). Claude không trả lời theo trí nhớ mà gọi công cụ
-để lấy dữ liệu thật: `search_books` tra cứu kho tài liệu, `get_my_account` xem sách đang mượn, hạn trả, tiền phạt của
-người đang đăng nhập. Quy định mượn trả và thông tin liên hệ được lấy từ trang *Cài đặt*. Trợ lý chỉ hướng dẫn,
-không tự đặt mượn hay gia hạn thay người dùng.
+Trợ lý có hai chế độ, tự chọn theo cấu hình:
+
+| Chế độ | Khi nào | Cách trả lời |
+|---|---|---|
+| **Trả lời tự động** (`app/chatbot_offline.py`) | Chưa có `ANTHROPIC_API_KEY`, hoặc Claude API gặp sự cố (sai key, hết hạn mức, mất mạng) | Nhận diện ý định câu hỏi theo từ khóa (giờ mở cửa, quy định mượn, gia hạn, phạt, đặt trước, tài liệu số, sách đang mượn...) và truy vấn CSDL; câu còn lại được tra cứu sách theo từ khóa. Miễn phí, gõ không dấu vẫn hiểu |
+| **Claude AI** (`app/chatbot.py`) | Có `ANTHROPIC_API_KEY` | Hiểu câu hỏi tự do; gọi công cụ `search_books`, `get_my_account` để lấy dữ liệu thật thay vì trả lời theo trí nhớ |
+
+Quy định mượn trả và thông tin liên hệ ở cả hai chế độ đều lấy từ trang *Cài đặt*. Trợ lý chỉ hướng dẫn, không tự đặt
+mượn hay gia hạn thay người dùng.
 
 Cấu hình trong `.env`:
 
 | Biến | Ý nghĩa |
 |---|---|
-| `ANTHROPIC_API_KEY` | API key lấy tại https://platform.claude.com (bắt buộc để trợ lý trả lời) |
+| `ANTHROPIC_API_KEY` | API key lấy tại https://platform.claude.com; để trống thì dùng chế độ trả lời tự động |
+| `CHATBOT_MODEL` | Mặc định `claude-haiku-5-5` (rẻ, nhanh). Đặt `claude-opus-5-5` để trả lời tốt hơn (đắt hơn khoảng 40 lần, tự bật cơ chế dự phòng `fallbacks`) |
 | `CHATBOT_ENABLED` | `0` để tắt trợ lý (nút Zalo/Gọi điện vẫn hiện) |
 | `CHATBOT_RATE_LIMIT`, `CHATBOT_RATE_WINDOW` | Số câu hỏi tối đa mỗi phiên trong khoảng thời gian (mặc định 15 câu / 300 giây) |
 | `HOTLINE` | Số điện thoại cho nút Gọi điện và Zalo; để trống để ẩn hai nút |
 
-Bật sẵn cơ chế dự phòng của Claude API (`fallbacks: "default"`): nếu bộ lọc an toàn từ chối nhầm một câu hỏi hợp lệ,
-API tự chạy lại trên model dự phòng. Test trong `tests/test_chatbot.py` dùng client giả nên không tốn phí API.
+Test trong `tests/test_chatbot.py` dùng client giả nên không tốn phí API.
 
 ## 9. Hạn chế và hướng phát triển
 - Thông báo mới hiển thị trong hệ thống, chưa gửi qua email (cần cấu hình SMTP)

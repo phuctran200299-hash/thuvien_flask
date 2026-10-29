@@ -4,6 +4,7 @@
     flask seed            Nạp dữ liệu mẫu (tài khoản admin/password123)
     flask expire-pending  Hủy phiếu chờ lấy quá hạn (lên lịch chạy hằng ngày)
     flask send-reminders  Gửi thông báo nhắc hạn trả sách (lên lịch chạy hằng ngày)
+    flask seed-demo       Bổ sung dữ liệu demo phong phú (khoảng 40 sách, 10 sinh viên, mượn trả, truy cập...)
 """
 import sys
 from datetime import date, datetime, timedelta
@@ -28,6 +29,7 @@ def register(app):
     app.cli.add_command(seed)
     app.cli.add_command(expire_pending)
     app.cli.add_command(send_reminders)
+    app.cli.add_command(seed_demo)
 
 
 @click.command('init-db')
@@ -55,6 +57,18 @@ def expire_pending():
     """Hủy các phiếu chờ lấy sách đã quá thời gian giữ sách."""
     count = expire_pending_borrowings()
     click.echo(f'[{datetime.now():%Y-%m-%d %H:%M}] Đã tự động hủy {count} phiếu chờ lấy quá hạn.')
+
+
+@click.command('seed-demo')
+def seed_demo():
+    """Bổ sung dữ liệu demo vào CSDL đang có (không xóa dữ liệu, chạy lại không bị trùng)."""
+    if not User.query.first():
+        click.echo('CSDL chưa có dữ liệu, hãy chạy "flask seed" trước.')
+        return
+    from .seed_demo import seed_demo_data
+    added = seed_demo_data()
+    click.echo(f'Đã thêm {added["categories"]} danh mục, {added["books"]} tài liệu ({added["files"]} có bản số), '
+               f'{added["members"]} sinh viên cùng lịch sử mượn trả, đánh giá, lượt truy cập.')
 
 
 @click.command('send-reminders')
